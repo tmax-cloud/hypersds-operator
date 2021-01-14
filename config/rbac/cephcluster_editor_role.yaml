@@ -1,0 +1,24 @@
+# permissions for end users to edit cephclusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cephcluster-editor-role
+rules:
+- apiGroups:
+  - hypersds.tmax.io
+  resources:
+  - cephclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hypersds.tmax.io
+  resources:
+  - cephclusters/status
+  verbs:
+  - get

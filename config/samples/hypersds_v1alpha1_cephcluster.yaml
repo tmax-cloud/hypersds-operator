@@ -1,0 +1,16 @@
+apiVersion: hypersds.tmax.io/v1alpha1
+kind: CephCluster
+metadata:
+  name: cephcluster-sample
+spec:
+  mon:
+    count: 1
+  nodes:
+    - name: young
+      accessInfo:
+        ip: 192.168.7.17
+        userId: root
+        password: "1111"
+        hostName: young
+      devices:
+        - /dev/sda

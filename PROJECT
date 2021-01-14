@@ -1,0 +1,7 @@
+domain: tmax.io
+repo: hypersds-operator
+resources:
+- group: hypersds
+  kind: CephCluster
+  version: v1alpha1
+version: "2"

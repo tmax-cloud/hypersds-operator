@@ -1,0 +1,102 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
+  creationTimestamp: null
+  name: cephclusters.hypersds.tmax.io
+spec:
+  group: hypersds.tmax.io
+  names:
+    kind: CephCluster
+    listKind: CephClusterList
+    plural: cephclusters
+    singular: cephcluster
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      description: CephCluster is the Schema for the cephclusters API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: CephClusterSpec defines the desired state of CephCluster
+          properties:
+            config:
+              additionalProperties:
+                type: string
+              type: object
+            mon:
+              properties:
+                count:
+                  type: integer
+              required:
+              - count
+              type: object
+            nodes:
+              items:
+                properties:
+                  accessInfo:
+                    properties:
+                      hostName:
+                        type: string
+                      ip:
+                        type: string
+                      password:
+                        type: string
+                      userId:
+                        type: string
+                    required:
+                    - hostName
+                    - ip
+                    - password
+                    - userId
+                    type: object
+                  devices:
+                    items:
+                      type: string
+                    type: array
+                  name:
+                    type: string
+                required:
+                - accessInfo
+                - devices
+                - name
+                type: object
+              type: array
+          required:
+          - mon
+          - nodes
+          type: object
+        status:
+          description: CephClusterStatus defines the observed state of CephCluster
+          properties:
+            state:
+              type: string
+          required:
+          - state
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
