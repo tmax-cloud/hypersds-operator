@@ -153,7 +153,7 @@ endef
 e2e-deploy: registry docker-build docker-push deploy
 	@echo "deploying cr ..."
 	kubectl apply -f config/samples/hypersds_v1alpha1_cephcluster.yaml
-	$(call wait-condition, kubectl get cephclusters.hypersds.tmax.io | grep Completed, 600, 30)
+	$(call wait-condition, kubectl get cephclusters.hypersds.tmax.io | grep Completed, 18000, 30)
 
 e2e: e2e-deploy clean
 	@echo "e2e completed"

@@ -5,12 +5,13 @@ metadata:
 spec:
   mon:
     count: 1
-  nodes:
-    - name: vagrant
-      accessInfo:
-        ip: 192.168.33.31
-        userId: tmax
-        password: "ck@3434"
-        hostName: vagrant
+  osd:
+    - hostName: vagrant
       devices:
         - /dev/sdb
+  nodes:
+    - ip: 192.168.33.11
+      # userId SHOULD BE ROOT
+      userId: root
+      password: "ck@3434"
+      hostName: vagrant
