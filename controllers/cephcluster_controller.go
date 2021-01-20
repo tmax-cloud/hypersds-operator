@@ -24,7 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	hypersdsv1alpha1 "hypersds-operator/api/v1alpha1"
+	hypersdsv1alpha1 "github.com/tmax-cloud/hypersds-operator/api/v1alpha1"
 )
 
 // CephClusterReconciler reconciles a CephCluster object
