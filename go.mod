@@ -1,4 +1,4 @@
-module hypersds-operator
+module github.com/tmax-cloud/hypersds-operator
 
 go 1.13
 

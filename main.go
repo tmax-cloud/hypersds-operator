@@ -26,8 +26,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	hypersdsv1alpha1 "hypersds-operator/api/v1alpha1"
-	"hypersds-operator/controllers"
+	hypersdsv1alpha1 "github.com/tmax-cloud/hypersds-operator/api/v1alpha1"
+	"github.com/tmax-cloud/hypersds-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
