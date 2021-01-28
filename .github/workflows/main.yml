@@ -2,7 +2,7 @@ name: hypersds-operator
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     paths-ignore:
       - 'docs/**'
@@ -12,12 +12,10 @@ on:
       - published
 jobs:
   lint:
-    runs-on: ubuntu-latest 
-    timeout-minutes: 3
+    runs-on: ubuntu-20.04
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Run golangci-lint
+      - uses: actions/checkout@v2
+      - name: run golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.35
@@ -31,10 +29,6 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - name: install minikube
-        run: |
-          make minikube-download
-          make minikube-start
       - name: install kubebuilder
         run: make kubebuilder-download
       - name: unit test

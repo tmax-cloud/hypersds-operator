@@ -1,6 +1,6 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= hypersds-operator:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -14,7 +14,7 @@ endif
 all: manager
 
 # Run tests
-test: generate fmt vet manifests
+test: generate fmt vet manifests verify
 	go test ./... -coverprofile cover.out
 
 # Build manager binary
@@ -50,6 +50,11 @@ fmt:
 vet:
 	go vet ./...
 
+# Run go mod command against code
+verify:
+	go mod tidy
+	go mod verify
+
 # Generate code
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -78,3 +83,38 @@ CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
+
+# Run golangci-lint
+lint:
+	golangci-lint run ./... -v
+
+# Verify go dependency and generated manifest files
+static-test: generate fmt vet manifests verify
+	git diff --exit-code
+
+# Run unit test
+unit-test:
+	go test -v ./controllers/... -ginkgo.v -ginkgo.failFast
+
+# Minikube related command
+minikube-download:
+	curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+	chmod +x minikube
+	sudo mkdir -p /usr/local/bin/
+	sudo install minikube /usr/local/bin/
+	sudo snap install kubectl --classic
+	sudo apt-get install conntrack
+
+minikube-start:
+	CHANGE_MINIKUBE_NONE_USER=true sudo -E minikube start --driver=none --kubernetes-version=v1.19.7
+	sleep 3
+
+minikube-clean:
+	CHANGE_MINIKUBE_NONE_USER=true sudo -E minikube delete
+
+# Kubebuilder related command
+kubebuilder-download:
+	curl -L https://go.kubebuilder.io/dl/2.3.1/linux/amd64 | tar -xz -C /tmp/
+	sudo mv /tmp/kubebuilder_2.3.1_linux_amd64 /usr/local/kubebuilder
+	export PATH=$(PATH):/usr/local/kubebuilder/bin
+
