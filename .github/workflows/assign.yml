@@ -1,0 +1,21 @@
+name: assign-automation
+on: 
+  pull_request:
+jobs:
+  assign:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: reviewers
+        uses: hkusu/review-assign-action@v1
+        with:
+          assignees: ${{ github.actor }}
+          reviewers: hyoung-90, hbinkim
+          max-num-of-reviewers: 2
+          draft-keyword: wip
+  size-label:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: size-label
+        uses: pascalgn/size-label-action@v0.4.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
