@@ -38,6 +38,10 @@ deploy: manifests
 	cd config/manager && kustomize edit set image controller=${IMG}
 	kustomize build config/default | kubectl apply -f -
 
+# Clean all deployed resources
+clean:
+	kustomize build config/default | kubectl delete -f -
+
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
@@ -58,6 +62,14 @@ verify:
 # Generate code
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+# Run a local registry
+registry:
+	docker run -d -p 5000:5000 --restart=always --name registry registry:2
+
+# Remove local registry
+registry-clean:
+	docker container stop registry && docker container rm -v registry
 
 # Build the docker image
 docker-build: test
