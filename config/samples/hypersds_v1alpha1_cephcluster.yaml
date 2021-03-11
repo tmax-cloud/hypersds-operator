@@ -6,11 +6,11 @@ spec:
   mon:
     count: 1
   nodes:
-    - name: young
+    - name: vagrant
       accessInfo:
-        ip: 192.168.7.17
-        userId: root
-        password: "1111"
-        hostName: young
+        ip: 192.168.33.31
+        userId: tmax
+        password: "ck@3434"
+        hostName: vagrant
       devices:
-        - /dev/sda
+        - /dev/sdb
