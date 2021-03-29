@@ -1,6 +1,5 @@
-
 # Image URL to use all building/pushing image targets
-IMG ?= hypersds-operator:latest
+IMG ?= 192.168.7.16:5000/hypersds-operator:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -65,7 +64,11 @@ generate: controller-gen
 
 # Run a local registry
 registry:
+ifeq (, $(shell docker ps | grep registry))
 	docker run -d -p 5000:5000 --restart=always --name registry registry:2
+else
+	@echo "local registry is already exists"
+endif
 
 # Remove local registry
 registry-clean:
@@ -129,4 +132,29 @@ kubebuilder-download:
 	curl -L https://go.kubebuilder.io/dl/2.3.1/linux/amd64 | tar -xz -C /tmp/
 	sudo mv /tmp/kubebuilder_2.3.1_linux_amd64 /usr/local/kubebuilder
 	export PATH=$(PATH):/usr/local/kubebuilder/bin
+
+define wait-condition
+	@cond="${1}"; \
+	timeout="${2}"; \
+	interval="${3}"; \
+	n=0; \
+	while [ $${n} -le $${timeout} ] ; do \
+		n=`expr $$n + $$interval`; \
+		echo "Waiting $$n seconds..."; \
+		if [ -z "$${cond}" ]; then echo "Condition is met"; echo $${cond}; true; fi; \
+		sleep $$interval; \
+		kubectl get cephclusters.hypersds.tmax.io; \
+	done; \
+
+	@echo "Timeout"
+	@false
+endef
+
+e2e-deploy: registry docker-build docker-push deploy
+	@echo "deploying cr ..."
+	kubectl apply -f config/samples/hypersds_v1alpha1_cephcluster.yaml
+	$(call wait-condition, kubectl get cephclusters.hypersds.tmax.io | grep Completed, 600, 30)
+
+e2e: e2e-deploy clean
+	@echo "e2e completed"
 
