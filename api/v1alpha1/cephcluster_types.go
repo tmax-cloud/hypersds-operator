@@ -23,17 +23,19 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+// CephClusterMonSpec defines the spec for monitor related option
 type CephClusterMonSpec struct {
 	Count int `json:"count"`
 }
 
-type Node struct {
-	Name       string         `json:"name"`
-	AccessInfo NodeAccessInfo `json:"accessInfo"`
-	Devices    []string       `json:"devices"`
+// CephClusterOsdSpec defines the spec for osd related option
+type CephClusterOsdSpec struct {
+	HostName string   `json:"hostName"`
+	Devices  []string `json:"devices"`
 }
 
-type NodeAccessInfo struct {
+// Node defines the spec for node related option
+type Node struct {
 	IP       string `json:"ip"`
 	UserID   string `json:"userId"`
 	Password string `json:"password"`
@@ -45,22 +47,41 @@ type CephClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Mon    CephClusterMonSpec `json:"mon"`
-	Nodes  []Node             `json:"nodes"`
-	Config map[string]string  `json:"config,omitempty"`
+	Mon    CephClusterMonSpec   `json:"mon"`
+	Osd    []CephClusterOsdSpec `json:"osd"`
+	Nodes  []Node               `json:"nodes"`
+	Config map[string]string    `json:"config,omitempty"`
 }
 
+// CephClusterState is the current state of CephCluster
 type CephClusterState string
+
+const (
+	// ConditionReadyToUse indicates CephCluster is ready to use
+	ConditionReadyToUse = "ReadyToUse"
+)
+
+const (
+	// CephClusterStateCreating indicates CephClusterState is creating
+	CephClusterStateCreating CephClusterState = "Creating"
+	// CephClusterStateCompleted indicates CephClusterState is completed
+	CephClusterStateCompleted CephClusterState = "Completed"
+	// CephClusterStateError indicates CephClusterState is error
+	CephClusterStateError CephClusterState = "Error"
+)
 
 // CephClusterStatus defines the observed state of CephCluster
 type CephClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	State CephClusterState `json:"state"`
+	State      CephClusterState   `json:"state"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state",description="Current state of CephCluster"
 
 // CephCluster is the Schema for the cephclusters API
 type CephCluster struct {
