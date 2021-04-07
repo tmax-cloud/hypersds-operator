@@ -45,7 +45,7 @@ jobs:
   e2e:
     needs: [image-build]
     runs-on: self-hosted
-    timeout-minutes: 60
+    timeout-minutes: 30
     strategy:
       matrix:
         config:
@@ -63,5 +63,5 @@ jobs:
     needs: [e2e]
     runs-on: self-hosted
     steps:
-      - run: ./hack/prolinux_cluster.sh down
+      - run: ./hack/cluster.sh down
 

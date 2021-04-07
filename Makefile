@@ -133,27 +133,8 @@ kubebuilder-download:
 	sudo mv /tmp/kubebuilder_2.3.1_linux_amd64 /usr/local/kubebuilder
 	export PATH=$(PATH):/usr/local/kubebuilder/bin
 
-define wait-condition
-	@cond="${1}"; \
-	timeout="${2}"; \
-	interval="${3}"; \
-	n=0; \
-	while [ $${n} -le $${timeout} ] ; do \
-		n=`expr $$n + $$interval`; \
-		echo "Waiting $$n seconds..."; \
-		if [ -z "$${cond}" ]; then echo "Condition is met"; echo $${cond}; true; fi; \
-		sleep $$interval; \
-		kubectl get cephclusters.hypersds.tmax.io; \
-	done; \
-
-	@echo "Timeout"
-	@false
-endef
-
 e2e-deploy: registry docker-build docker-push deploy
-	@echo "deploying cr ..."
-	kubectl apply -f config/samples/hypersds_v1alpha1_cephcluster.yaml
-	$(call wait-condition, kubectl get cephclusters.hypersds.tmax.io | grep Completed, 18000, 30)
+	hack/e2e.sh bootstrap
 
 e2e: e2e-deploy clean
 	@echo "e2e completed"
