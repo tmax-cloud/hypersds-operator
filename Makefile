@@ -2,6 +2,8 @@
 IMG ?= 192.168.7.16:5000/hypersds-operator:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
+# Name prefix to generate the names of all resources. This value must be the same as 'namePrefix' defined in config/default/kustomization.yaml
+NAME_PREFIX ?= hypersds-operator-
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -38,8 +40,10 @@ deploy: manifests
 	kustomize build config/default | kubectl apply -f -
 
 # Clean all deployed resources
-clean:
-	kustomize build config/default | kubectl delete -f -
+clean: uninstall
+	kubectl delete namespace $(NAME_PREFIX)system
+	kubectl delete clusterroles.rbac.authorization.k8s.io $(NAME_PREFIX)manager-role $(NAME_PREFIX)metrics-reader $(NAME_PREFIX)proxy-role
+	kubectl delete clusterrolebinding.rbac.authorization.k8s.io $(NAME_PREFIX)manager-rolebinding $(NAME_PREFIX)proxy-rolebinding
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
