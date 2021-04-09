@@ -15,8 +15,7 @@ const (
 	// ProvisionContainerName indicates container name of the provision pod
 	ProvisionContainerName = "hypersds-provisioner"
 	// ProvisionContainerImage indicates image name of the provision pod
-	// TODO: ProvisionContainerImage should be updated
-	ProvisionContainerImage = "192.168.7.16:5000/hypersds-provisioner"
+	ProvisionContainerImage = "quay.io/tmaxanc/hypersds-provisioner:v0.1.0"
 	// ConfigMapVolumeName is used for creating configmap volume in pod specs
 	ConfigMapVolumeName = "ceph-cluster-info"
 	// ConfigMapVolumePath is a path where the configmap volume is mounted
