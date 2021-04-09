@@ -46,6 +46,7 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	metricsPort := 9443
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
@@ -57,7 +58,7 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
-		Port:               9443,
+		Port:               metricsPort,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "35b060ce.tmax.io",
 	})

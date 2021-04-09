@@ -2,6 +2,8 @@
 IMG ?= 192.168.7.16:5000/hypersds-operator:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
+# Name prefix to generate the names of all resources. This value must be the same as 'namePrefix' defined in config/default/kustomization.yaml
+NAME_PREFIX ?= hypersds-operator-
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -38,8 +40,10 @@ deploy: manifests
 	kustomize build config/default | kubectl apply -f -
 
 # Clean all deployed resources
-clean:
-	kustomize build config/default | kubectl delete -f -
+clean: uninstall
+	kubectl delete namespace $(NAME_PREFIX)system
+	kubectl delete clusterroles.rbac.authorization.k8s.io $(NAME_PREFIX)manager-role $(NAME_PREFIX)metrics-reader $(NAME_PREFIX)proxy-role
+	kubectl delete clusterrolebinding.rbac.authorization.k8s.io $(NAME_PREFIX)manager-rolebinding $(NAME_PREFIX)proxy-rolebinding
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
@@ -133,27 +137,8 @@ kubebuilder-download:
 	sudo mv /tmp/kubebuilder_2.3.1_linux_amd64 /usr/local/kubebuilder
 	export PATH=$(PATH):/usr/local/kubebuilder/bin
 
-define wait-condition
-	@cond="${1}"; \
-	timeout="${2}"; \
-	interval="${3}"; \
-	n=0; \
-	while [ $${n} -le $${timeout} ] ; do \
-		n=`expr $$n + $$interval`; \
-		echo "Waiting $$n seconds..."; \
-		if [ -z "$${cond}" ]; then echo "Condition is met"; echo $${cond}; true; fi; \
-		sleep $$interval; \
-		kubectl get cephclusters.hypersds.tmax.io; \
-	done; \
-
-	@echo "Timeout"
-	@false
-endef
-
 e2e-deploy: registry docker-build docker-push deploy
-	@echo "deploying cr ..."
-	kubectl apply -f config/samples/hypersds_v1alpha1_cephcluster.yaml
-	$(call wait-condition, kubectl get cephclusters.hypersds.tmax.io | grep Completed, 600, 30)
+	hack/e2e.sh bootstrap
 
 e2e: e2e-deploy clean
 	@echo "e2e completed"
