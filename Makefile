@@ -113,7 +113,7 @@ static-test: generate fmt vet manifests verify
 
 # Run unit test
 unit-test:
-	go test -v ./controllers/... -ginkgo.v -ginkgo.failFast
+	go test -v ./... -ginkgo.v -ginkgo.failFast
 
 # Minikube related command
 minikube-download:
