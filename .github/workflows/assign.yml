@@ -9,7 +9,7 @@ jobs:
         uses: hkusu/review-assign-action@v1
         with:
           assignees: ${{ github.actor }}
-          reviewers: hyoung-90, hbinkim
+          reviewers: hyoung-90, hbinkim, shellwedance, donggyupark
           max-num-of-reviewers: 2
           draft-keyword: wip
   size-label:
