@@ -44,6 +44,7 @@ func (r *CephClusterReconciler) syncProvisioner() error {
 		return err
 	}
 
+	// TODO: SHOULD CHANGE THE LOGIC TO NOT USE PROVISIONER POD
 	pod := &corev1.Pod{}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: getProvisionPodName(r.Cluster.Name)}, pod)
 	if err != nil && !errors.IsNotFound(err) {
