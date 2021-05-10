@@ -1,5 +1,5 @@
-domain: tmax.io
-repo: hypersds-operator
+domain: github.com
+repo: github.com/tmax-cloud/hypersds-operator
 resources:
 - group: hypersds
   kind: CephCluster
