@@ -4,4 +4,7 @@ resources:
 - group: hypersds
   kind: CephCluster
   version: v1alpha1
+- group: hypersds
+  kind: CephBlockPool
+  version: v1alpha1
 version: "2"

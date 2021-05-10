@@ -1,0 +1,7 @@
+apiVersion: hypersds.tmax.io/v1alpha1
+kind: CephBlockPool
+metadata:
+  name: cephblockpool-sample
+spec:
+  # Add fields here
+  foo: bar
