@@ -1,7 +1,7 @@
 # Image URL to use all building/pushing image targets
 IMG ?= 192.168.7.16:5000/hypersds-operator:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+CRD_OPTIONS ?= "crd:trivialVersions=true,crdVersions=v1"
 # Name prefix to generate the names of all resources. This value must be the same as 'namePrefix' defined in config/default/kustomization.yaml
 NAME_PREFIX ?= hypersds-operator-
 

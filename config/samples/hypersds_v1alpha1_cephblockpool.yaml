@@ -3,5 +3,19 @@ kind: CephBlockPool
 metadata:
   name: cephblockpool-sample
 spec:
-  # Add fields here
-  foo: bar
+  # The failure domain will spread the replicas of the data across different failure zones
+  failureDomain: host
+  #crushRoot: my-root
+  # The Ceph CRUSH device class associated with the CRUSH replicated rule
+  #deviceClass: my-class
+  compressionMode: none
+  # For a pool based on raw copies, specify the number of copies. A size of 1 indicates no redundancy.
+  replicated:
+    size: 1
+    #target_size_ratio: ".5"
+  # Enables collecting RBD per-image IO statistics by enabling dynamic OSD performance counters. Defaults to false.
+  #enableRBDStats: true
+  # Quota in bytes and/or objects, default value is 0 (unlimited)
+  #quotas:
+    #maxSize: "10Gi" # valid suffixes include k, M, G, T, P, E, Ki, Mi, Gi, Ti, Pi, Ei
+    #maxObjects: 1000000000 # 1 billion objects
