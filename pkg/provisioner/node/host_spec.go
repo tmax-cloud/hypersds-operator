@@ -1,7 +1,7 @@
 package node
 
 import (
-	common "github.com/tmax-cloud/hypersds-operator/pkg/provisioner/common/wrapper"
+	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
 
 	"errors"
 )
@@ -71,7 +71,7 @@ func (hs *HostSpec) GetStatus() string {
 	return hs.Status
 }
 
-func (hs *HostSpec) MakeYmlFile(yamlWrapper common.YamlInterface, ioUtilWrapper common.IoUtilInterface, fileName string) error {
+func (hs *HostSpec) MakeYmlFile(yamlWrapper wrapper.YamlInterface, ioUtilWrapper wrapper.IoUtilInterface, fileName string) error {
 	ymlBytes, err := yamlWrapper.Marshal(hs)
 	if err != nil {
 		return err

@@ -3,7 +3,7 @@ package node
 import (
 	"os"
 
-	common "github.com/tmax-cloud/hypersds-operator/pkg/provisioner/common/wrapper"
+	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
 
 	gomock "github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -75,8 +75,8 @@ var _ = Describe("HostSpec Test", func() {
 	Describe("MakeYmlFile Test", func() {
 		var (
 			mockCtrl *gomock.Controller
-			mYaml    *common.MockYamlInterface
-			mIoUtil  *common.MockIoUtilInterface
+			mYaml    *wrapper.MockYamlInterface
+			mIoUtil  *wrapper.MockIoUtilInterface
 			fileName string
 		)
 
@@ -96,8 +96,8 @@ var _ = Describe("HostSpec Test", func() {
 			}
 
 			mockCtrl = gomock.NewController(GinkgoT())
-			mYaml = common.NewMockYamlInterface(mockCtrl)
-			mIoUtil = common.NewMockIoUtilInterface(mockCtrl)
+			mYaml = wrapper.NewMockYamlInterface(mockCtrl)
+			mIoUtil = wrapper.NewMockIoUtilInterface(mockCtrl)
 
 			fileName = "tmp.yml"
 		})

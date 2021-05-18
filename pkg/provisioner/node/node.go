@@ -1,7 +1,7 @@
 package node
 
 import (
-	common "github.com/tmax-cloud/hypersds-operator/pkg/provisioner/common/wrapper"
+	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
 
 	hypersdsv1alpha1 "github.com/tmax-cloud/hypersds-operator/api/v1alpha1"
 	"golang.org/x/crypto/ssh"
@@ -45,7 +45,7 @@ func (n *Node) GetHostSpec() HostSpec {
 }
 
 // TODO: replace sshpass command to go ssh pkg
-func (n *Node) RunSshCmd(sshWrapper common.SshInterface, cmdQuery string) (bytes.Buffer, error) {
+func (n *Node) RunSshCmd(sshWrapper wrapper.SshInterface, cmdQuery string) (bytes.Buffer, error) {
 
 	userPw := n.GetUserPw()
 	userId := n.GetUserId()
@@ -76,7 +76,7 @@ func (n *Node) RunSshCmd(sshWrapper common.SshInterface, cmdQuery string) (bytes
  * (SOURCE) sshpass -f <(printf '%s\n' userPw) scp -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null userId@ipAddr:/srcFile destFile
  */
 // TODO: replace sshpass command to go ssh pkg
-func (n *Node) RunScpCmd(exec common.ExecInterface, srcFile, destFile string, role Role) (bytes.Buffer, error) {
+func (n *Node) RunScpCmd(exec wrapper.ExecInterface, srcFile, destFile string, role Role) (bytes.Buffer, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), SshCmdTimeout)
 	defer cancel()
 
@@ -112,8 +112,8 @@ func (n *Node) RunScpCmd(exec common.ExecInterface, srcFile, destFile string, ro
 	return resultStdout, nil
 }
 
-func NewNodesFromCephCr(cephSpec hypersdsv1alpha1.CephClusterSpec) ([]Node, error) {
-	var nodes []Node
+func NewNodesFromCephCr(cephSpec hypersdsv1alpha1.CephClusterSpec) ([]*Node, error) {
+	var nodes []*Node
 
 	for _, nodeInCephSpec := range cephSpec.Nodes {
 		var n Node
@@ -147,7 +147,7 @@ func NewNodesFromCephCr(cephSpec hypersdsv1alpha1.CephClusterSpec) ([]Node, erro
 			return nil, err
 		}
 
-		nodes = append(nodes, n)
+		nodes = append(nodes, &n)
 	}
 
 	return nodes, nil

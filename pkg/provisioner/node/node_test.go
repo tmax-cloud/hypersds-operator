@@ -3,7 +3,7 @@ package node
 import (
 	"bytes"
 
-	common "github.com/tmax-cloud/hypersds-operator/pkg/provisioner/common/wrapper"
+	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
 
 	gomock "github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -55,12 +55,12 @@ var _ = Describe("Node Test", func() {
 	Describe("RunSshCmd Test", func() {
 		var (
 			mockCtrl *gomock.Controller
-			m        *common.MockSshInterface
+			m        *wrapper.MockSshInterface
 		)
 
 		BeforeEach(func() {
 			mockCtrl = gomock.NewController(GinkgoT())
-			m = common.NewMockSshInterface(mockCtrl)
+			m = wrapper.NewMockSshInterface(mockCtrl)
 		})
 
 		AfterEach(func() {
