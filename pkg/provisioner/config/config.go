@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	hypersdsv1alpha1 "github.com/tmax-cloud/hypersds-operator/api/v1alpha1"
 	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
@@ -12,39 +11,47 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (conf *CephConfig) SetCrConf(m map[string]string) error {
-	conf.crConf = m
-	return nil
-}
-
-func (conf *CephConfig) SetAdmConf(m map[string]string) error {
-	conf.admConf = m
-	return nil
-}
-
-func (conf *CephConfig) SetAdmSecret(m map[string][]byte) error {
-	conf.admSecret = m
-	return nil
-}
-
-func (conf *CephConfig) GetCrConf() map[string]string {
-	return conf.crConf
-}
-
-func (conf *CephConfig) GetAdmConf() map[string]string {
-	return conf.admConf
-}
-
-func (conf *CephConfig) GetAdmSecret() map[string][]byte {
-	return conf.admSecret
-}
-
+// CephConfig is struct for ceph config
 type CephConfig struct {
 	crConf    map[string]string
 	admConf   map[string]string
 	admSecret map[string][]byte
 }
 
+// SetCrConf sets crConf to value
+func (conf *CephConfig) SetCrConf(m map[string]string) error {
+	conf.crConf = m
+	return nil
+}
+
+// SetAdmConf sets admConf to value
+func (conf *CephConfig) SetAdmConf(m map[string]string) error {
+	conf.admConf = m
+	return nil
+}
+
+// SetAdmSecret sets admSecret to value
+func (conf *CephConfig) SetAdmSecret(m map[string][]byte) error {
+	conf.admSecret = m
+	return nil
+}
+
+// GetCrConf gets value of crConf
+func (conf *CephConfig) GetCrConf() map[string]string {
+	return conf.crConf
+}
+
+// GetAdmConf gets value of admConf
+func (conf *CephConfig) GetAdmConf() map[string]string {
+	return conf.admConf
+}
+
+// GetAdmSecret gets value of admSecret
+func (conf *CephConfig) GetAdmSecret() map[string][]byte {
+	return conf.admSecret
+}
+
+// NewConfigFromCephCr reads ceph config from cephclusterspec and creates CephConfig
 func NewConfigFromCephCr(cephCr hypersdsv1alpha1.CephClusterSpec) (*CephConfig, error) {
 	conf := CephConfig{}
 	crConf := make(map[string]string)
@@ -57,6 +64,7 @@ func NewConfigFromCephCr(cephCr hypersdsv1alpha1.CephClusterSpec) (*CephConfig, 
 	return &conf, err
 }
 
+// ConfigFromAdm reads ceph config(ceph access info) from ceph.conf
 func (conf *CephConfig) ConfigFromAdm(ioUtil wrapper.IoUtilInterface, cephconf string) error {
 	admConf := make(map[string]string)
 
@@ -64,19 +72,11 @@ func (conf *CephConfig) ConfigFromAdm(ioUtil wrapper.IoUtilInterface, cephconf s
 	if err != nil {
 		return err
 	}
-	lines := strings.Split(string(dat[:]), "\n")
-	for _, s := range lines {
-		kv := strings.Split(s, "=")
-		if len(kv) > 1 {
-			key := strings.TrimSpace(kv[0])
-			val := strings.TrimSpace(kv[1])
-			admConf[key] = val
-		}
-	}
 	admConf["conf"] = string(dat)
 	return conf.SetAdmConf(admConf)
 }
 
+// SecretFromAdm reads ceph keyring(ceph access info) from ceph.client.admin.keyring
 func (conf *CephConfig) SecretFromAdm(ioUtil wrapper.IoUtilInterface, cephsecret string) error {
 	admSecret := make(map[string][]byte)
 
@@ -89,6 +89,7 @@ func (conf *CephConfig) SecretFromAdm(ioUtil wrapper.IoUtilInterface, cephsecret
 	return conf.SetAdmSecret(admSecret)
 }
 
+// MakeIniFile makes ceph.conf file using crConf
 func (conf *CephConfig) MakeIniFile(ioUtil wrapper.IoUtilInterface, fileName string) error {
 	ini := "[global]\n"
 	crConf := conf.GetCrConf()
@@ -103,7 +104,7 @@ func (conf *CephConfig) MakeIniFile(ioUtil wrapper.IoUtilInterface, fileName str
 	return err
 }
 
-//default:default SA가 configmap put할수 있는 rolebinding 있어야함!
+// UpdateConfToK8s updates ceph config(ceph access info) to k8s configmap
 func (conf *CephConfig) UpdateConfToK8s(clientSet client.Client, cephNamespace, cephName string) error {
 	configMap := &corev1.ConfigMap{}
 	if err := clientSet.Get(context.TODO(), types.NamespacedName{Namespace: cephNamespace, Name: cephName}, configMap); err != nil {
@@ -116,6 +117,7 @@ func (conf *CephConfig) UpdateConfToK8s(clientSet client.Client, cephNamespace, 
 	return err
 }
 
+// UpdateKeyringToK8s updates ceph keyring(ceph access info) to k8s secret
 func (conf *CephConfig) UpdateKeyringToK8s(clientSet client.Client, cephNamespace, cephName string) error {
 	secret := &corev1.Secret{}
 	if err := clientSet.Get(context.TODO(), types.NamespacedName{Namespace: cephNamespace, Name: cephName}, secret); err != nil {

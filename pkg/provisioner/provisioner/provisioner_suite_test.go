@@ -1,4 +1,4 @@
-package util
+package provisioner
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestUtil(t *testing.T) {
+func TestProvisioner(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Util Suite")
+	RunSpecs(t, "Provisioner Suite")
 }

@@ -2,63 +2,84 @@ package osd
 
 // https://github.com/ceph/ceph/blob/master/src/python-common/ceph/deployment/drive_group.py
 
+// Device is struct to define ceph device spec of ceph spec yaml
 type Device struct {
-	Paths      []string `yaml:"paths,omitempty"`
-	Model      string   `yaml:"model,omitempty"`
-	Size       string   `yaml:"size,omitempty"`
-	Rotational bool     `yaml:"rotational,omitempty"`
-	Limit      int      `yaml:"limit,omitempty"`
-	Vendor     string   `yaml:"vendor,omitempty"`
-	All        bool     `yaml:"all,omitempty"`
+	// Paths indicates paths field
+	Paths []string `yaml:"paths,omitempty"`
+	// Model indicates model field
+	Model string `yaml:"model,omitempty"`
+	// Size indicates size field
+	Size string `yaml:"size,omitempty"`
+	// Rotational indicates rotational field
+	Rotational bool `yaml:"rotational,omitempty"`
+	// Limit indicates limit field
+	Limit int `yaml:"limit,omitempty"`
+	// Vendor indicates vendor field
+	Vendor string `yaml:"vendor,omitempty"`
+	// All indicates all field
+	All bool `yaml:"all,omitempty"`
 }
 
-func (d *Device) SetPaths(paths []string) error {
+//nolint:unparam // now, setMethod always return nil, if setMethod needs return other value, deletes nolint and implement
+func (d *Device) setPaths(paths []string) error {
 	d.Paths = paths
 	return nil
 }
-func (d *Device) SetModel(model string) error {
+
+//nolint:unparam // now, setMethod always return nil, if setMethod needs return other value, deletes nolint and implement
+func (d *Device) setModel(model string) error {
 	d.Model = model
 	return nil
 }
-func (d *Device) SetSize(size string) error {
+
+//nolint:unparam // now, setMethod always return nil, if setMethod needs return other value, deletes nolint and implement
+func (d *Device) setSize(size string) error {
 	d.Size = size
 	return nil
 }
-func (d *Device) SetRotational(rotational bool) error {
+
+//nolint:unparam // now, setMethod always return nil, if setMethod needs return other value, deletes nolint and implement
+func (d *Device) setRotational(rotational bool) error {
 	d.Rotational = rotational
 	return nil
 }
-func (d *Device) SetLimit(limit int) error {
+
+//nolint:unparam // now, setMethod always return nil, if setMethod needs return other value, deletes nolint and implement
+func (d *Device) setLimit(limit int) error {
 	d.Limit = limit
 	return nil
 }
-func (d *Device) SetVendor(vendor string) error {
+
+//nolint:unparam // now, setMethod always return nil, if setMethod needs return other value, deletes nolint and implement
+func (d *Device) setVendor(vendor string) error {
 	d.Vendor = vendor
 	return nil
 }
-func (d *Device) SetAll(all bool) error {
+
+//nolint:unparam // now, setMethod always return nil, if setMethod needs return other value, deletes nolint and implement
+func (d *Device) setAll(all bool) error {
 	d.All = all
 	return nil
 }
 
-func (d *Device) GetPaths() []string {
+func (d *Device) getPaths() []string {
 	return d.Paths
 }
-func (d *Device) GetModel() string {
+func (d *Device) getModel() string {
 	return d.Model
 }
-func (d *Device) GetSize() string {
+func (d *Device) getSize() string {
 	return d.Size
 }
-func (d *Device) GetRotational() bool {
+func (d *Device) getRotational() bool {
 	return d.Rotational
 }
-func (d *Device) GetLimit() int {
+func (d *Device) getLimit() int {
 	return d.Limit
 }
-func (d *Device) GetVendor() string {
+func (d *Device) getVendor() string {
 	return d.Vendor
 }
-func (d *Device) GetAll() bool {
+func (d *Device) getAll() bool {
 	return d.All
 }

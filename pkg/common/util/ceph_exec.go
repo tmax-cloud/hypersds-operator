@@ -3,20 +3,22 @@ package util
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
-	corev1 "k8s.io/api/core/v1"
 )
 
 const (
+	// CephExecCmdTimeout defines max delay time for exec
 	CephExecCmdTimeout = 1 * time.Minute
-	CephCmdTimeout     = "50"
+	// CephCmdTimeout defines max delay time for ceph
+	CephCmdTimeout = "50"
 )
 
-func RunCephCmd(os wrapper.OsInterface, exec wrapper.ExecInterface, ioUtil wrapper.IoUtilInterface, cephConf *corev1.ConfigMap, cephKeyring *corev1.Secret, cephName string, cmdQuery ...string) (bytes.Buffer, error) {
+// RunCephCmd extracts ceph access info from k8s configmap, secret and executes command to ceph
+func RunCephCmd(os wrapper.OsInterface, exec wrapper.ExecInterface, ioUtil wrapper.IoUtilInterface,
+	cephConf, cephKeyring []byte, cephName string, cmdQuery ...string) (bytes.Buffer, error) {
 	var resultStdout, resultStderr bytes.Buffer
 
 	pathConfigDir := PathGlobalConfigDir + cephName + "/"
@@ -29,24 +31,13 @@ func RunCephCmd(os wrapper.OsInterface, exec wrapper.ExecInterface, ioUtil wrapp
 	pathConf := pathConfigDir + CephConfName
 	pathKeyring := pathConfigDir + CephKeyringName
 
-	confData, ok := cephConf.Data["conf"]
-	if !ok {
-		fmt.Println("[RunCephCmd] Ceph Conf Data isn't exist")
-		return resultStdout, errors.New("[RunCephCmd] Ceph Conf Data isn't exist")
-	}
-	confDataBuf := []byte(confData)
-	err = ioUtil.WriteFile(pathConf, confDataBuf, 0644)
+	err = ioUtil.WriteFile(pathConf, cephConf, 0644)
 	if err != nil {
 		fmt.Println("[RunCephCmd] Ceph Conf Write Fail")
 		return resultStdout, err
 	}
 
-	keyringDataBuf, ok := cephKeyring.Data["keyring"]
-	if !ok {
-		fmt.Println("[RunCephCmd] Ceph Keyring Data isn't exist")
-		return resultStdout, errors.New("[RunCephCmd] Ceph keyring Data isn't exist")
-	}
-	err = ioUtil.WriteFile(pathKeyring, keyringDataBuf, 0644)
+	err = ioUtil.WriteFile(pathKeyring, cephKeyring, 0644)
 	if err != nil {
 		fmt.Println("[RunCephCmd] Ceph Keyring Write Fail")
 		return resultStdout, err
@@ -57,7 +48,7 @@ func RunCephCmd(os wrapper.OsInterface, exec wrapper.ExecInterface, ioUtil wrapp
 	ctx, cancel := context.WithTimeout(context.Background(), CephExecCmdTimeout)
 	defer cancel()
 
-	err = exec.CommandExecute(&resultStdout, &resultStderr, ctx, "ceph", cmdQuery...)
+	err = exec.CommandExecute(ctx, &resultStdout, &resultStderr, "ceph", cmdQuery...)
 
 	if err != nil {
 		return resultStderr, err

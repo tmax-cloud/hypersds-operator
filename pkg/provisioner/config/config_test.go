@@ -91,9 +91,7 @@ var _ = Describe("Config Test", func() {
 				}).AnyTimes()
 			testConfig := CephConfig{}
 			AdmConfig := map[string]string{
-				"conf":     "[global]\n\tfsid = b29fd\n\tmon_host = [0.0.0.0]\n",
-				"fsid":     "b29fd",
-				"mon_host": "[0.0.0.0]",
+				"conf": "[global]\n\tfsid = b29fd\n\tmon_host = [0.0.0.0]\n",
 			}
 			err := testConfig.ConfigFromAdm(ioMock, "ceph.conf")
 			Expect(err).NotTo(HaveOccurred())
@@ -130,18 +128,23 @@ var _ = Describe("Config Test", func() {
 					"debug_osd": "20/20",
 				},
 			}
-			//ini := "[global]\n\tdebug_osd = 20/20\n"
+			// ini := "[global]\n\tdebug_osd = 20/20\n"
 			err := testConfig.MakeIniFile(ioMock, "ceph.conf")
 			Expect(err).NotTo(HaveOccurred())
-			//Expect(retini).To(Equal(ini))
+			// Expect(retini).To(Equal(ini))
 		})
 	})
 	Describe("[INCOMPLETE][UpdateConfToK8s Test]", func() {
-		testConfig := CephConfig{
-			crConf: map[string]string{
-				"test": "test",
-			},
-		}
+		var (
+			testConfig CephConfig
+		)
+		BeforeEach(func() {
+			testConfig = CephConfig{
+				crConf: map[string]string{
+					"test": "test",
+				},
+			}
+		})
 		It("should return nil with configmap", func() {
 			configMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{

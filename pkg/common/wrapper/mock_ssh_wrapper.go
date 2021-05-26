@@ -11,31 +11,31 @@ import (
 	reflect "reflect"
 )
 
-// MockSshInterface is a mock of SshInterface interface
-type MockSshInterface struct {
+// MockSSHInterface is a mock of SSHInterface interface
+type MockSSHInterface struct {
 	ctrl     *gomock.Controller
-	recorder *MockSshInterfaceMockRecorder
+	recorder *MockSSHInterfaceMockRecorder
 }
 
-// MockSshInterfaceMockRecorder is the mock recorder for MockSshInterface
-type MockSshInterfaceMockRecorder struct {
-	mock *MockSshInterface
+// MockSSHInterfaceMockRecorder is the mock recorder for MockSSHInterface
+type MockSSHInterfaceMockRecorder struct {
+	mock *MockSSHInterface
 }
 
-// NewMockSshInterface creates a new mock instance
-func NewMockSshInterface(ctrl *gomock.Controller) *MockSshInterface {
-	mock := &MockSshInterface{ctrl: ctrl}
-	mock.recorder = &MockSshInterfaceMockRecorder{mock}
+// NewMockSSHInterface creates a new mock instance
+func NewMockSSHInterface(ctrl *gomock.Controller) *MockSSHInterface {
+	mock := &MockSSHInterface{ctrl: ctrl}
+	mock.recorder = &MockSSHInterfaceMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockSshInterface) EXPECT() *MockSshInterfaceMockRecorder {
+func (m *MockSSHInterface) EXPECT() *MockSSHInterfaceMockRecorder {
 	return m.recorder
 }
 
 // Run mocks base method
-func (m *MockSshInterface) Run(addr, command string, resultStdout, resultStderr *bytes.Buffer, config *ssh.ClientConfig) error {
+func (m *MockSSHInterface) Run(addr, command string, resultStdout, resultStderr *bytes.Buffer, config *ssh.ClientConfig) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Run", addr, command, resultStdout, resultStderr, config)
 	ret0, _ := ret[0].(error)
@@ -43,7 +43,7 @@ func (m *MockSshInterface) Run(addr, command string, resultStdout, resultStderr 
 }
 
 // Run indicates an expected call of Run
-func (mr *MockSshInterfaceMockRecorder) Run(addr, command, resultStdout, resultStderr, config interface{}) *gomock.Call {
+func (mr *MockSSHInterfaceMockRecorder) Run(addr, command, resultStdout, resultStderr, config interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockSshInterface)(nil).Run), addr, command, resultStdout, resultStderr, config)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockSSHInterface)(nil).Run), addr, command, resultStdout, resultStderr, config)
 }

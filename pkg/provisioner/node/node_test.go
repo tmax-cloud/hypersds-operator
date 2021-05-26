@@ -2,6 +2,7 @@ package node
 
 import (
 	"bytes"
+	"context"
 
 	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
 
@@ -17,20 +18,20 @@ var _ = Describe("Node Test", func() {
 
 	var (
 		testingNode                      Node
-		userId, userPw, ipAddr, hostName string
+		userID, userPw, ipAddr, hostName string
 		hostSpec                         HostSpec
 		cephSpec                         hypersdsv1alpha1.CephClusterSpec
 	)
 
 	Describe("Getter/Setter Test", func() {
 		It("is simple test case", func() {
-			// userId getter/setter test
-			userId = "shellwedance"
-			err := testingNode.SetUserId(userId)
+			// userID getter/setter test
+			userID = "shellwedance"
+			err := testingNode.SetUserID(userID)
 			Expect(err).NotTo(HaveOccurred())
 
-			changedUserId := testingNode.GetUserId()
-			Expect(changedUserId).To(Equal(userId))
+			changedUserID := testingNode.GetUserID()
+			Expect(changedUserID).To(Equal(userID))
 
 			// userPw getter/setter test
 			userPw = "123abc!@#"
@@ -44,7 +45,7 @@ var _ = Describe("Node Test", func() {
 			hostSpec = HostSpec{
 				ServiceType: HostSpecServiceType,
 			}
-			err = testingNode.SetHostSpec(hostSpec)
+			err = testingNode.SetHostSpec(&hostSpec)
 			Expect(err).NotTo(HaveOccurred())
 
 			changedHostSpec := testingNode.GetHostSpec()
@@ -52,15 +53,15 @@ var _ = Describe("Node Test", func() {
 		})
 	})
 
-	Describe("RunSshCmd Test", func() {
+	Describe("RunSSHCmd Test", func() {
 		var (
 			mockCtrl *gomock.Controller
-			m        *wrapper.MockSshInterface
+			m        *wrapper.MockSSHInterface
 		)
 
 		BeforeEach(func() {
 			mockCtrl = gomock.NewController(GinkgoT())
-			m = wrapper.NewMockSshInterface(mockCtrl)
+			m = wrapper.NewMockSSHInterface(mockCtrl)
 		})
 
 		AfterEach(func() {
@@ -75,16 +76,53 @@ var _ = Describe("Node Test", func() {
 					return nil
 				}).AnyTimes()
 
-			result, err := testingNode.RunSshCmd(m, testCommand)
+			result, err := testingNode.RunSSHCmd(m, testCommand)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.String()).To(Equal(testCommand))
+		})
+	})
+
+	Describe("RunScpCmd Test", func() {
+		var (
+			mockCtrl *gomock.Controller
+			m        *wrapper.MockExecInterface
+		)
+
+		BeforeEach(func() {
+			mockCtrl = gomock.NewController(GinkgoT())
+			m = wrapper.NewMockExecInterface(mockCtrl)
+		})
+
+		AfterEach(func() {
+			mockCtrl.Finish()
+		})
+
+		It("is simple test case", func() {
+			testString := "hello world"
+			role := DESTINATION
+			srcFile := "src"
+			destFile := "dest"
+			m.EXPECT().CommandExecute(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+				func(ctx context.Context, resultStdout, resultStderr *bytes.Buffer, name string, arg ...string) error {
+					resultStdout.WriteString(testString)
+					return nil
+				}).AnyTimes()
+
+			result, err := testingNode.RunScpCmd(m, srcFile, destFile, role)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.String()).To(Equal(testString))
+
+			role = SOURCE
+			result, err = testingNode.RunScpCmd(m, srcFile, destFile, role)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.String()).To(Equal(testString))
 		})
 	})
 
 	Describe("[NewNodesFromCephCr Test]", func() {
 		It("is simple test case", func() {
 			ipAddr = "1.1.1.1"
-			userId = "developer1"
+			userID = "developer1"
 			userPw = "abc123!@#"
 			hostName = "node1"
 
@@ -92,7 +130,7 @@ var _ = Describe("Node Test", func() {
 				Nodes: []hypersdsv1alpha1.Node{
 					{
 						IP:       ipAddr,
-						UserID:   userId,
+						UserID:   userID,
 						Password: userPw,
 						HostName: hostName,
 					},
@@ -103,11 +141,11 @@ var _ = Describe("Node Test", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(nodes)).To(Equal(1))
 
-			createdUserId := nodes[0].GetUserId()
-			Expect(createdUserId).To(Equal(userId))
+			createdUserID := nodes[0].GetUserID()
+			Expect(createdUserID).To(Equal(userID))
 
-			createdUserPw := nodes[0].GetUserId()
-			Expect(createdUserPw).To(Equal(userId))
+			createdUserPw := nodes[0].GetUserID()
+			Expect(createdUserPw).To(Equal(userID))
 
 			createdHostSpec := nodes[0].GetHostSpec()
 			Expect(createdHostSpec.GetServiceType()).To(Equal(HostSpecServiceType))

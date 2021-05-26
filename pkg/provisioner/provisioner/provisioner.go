@@ -18,9 +18,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Provisioner contains information for ceph deployment and current ceph deployment status
 type Provisioner struct {
 	cephCluster hypersdsv1alpha1.CephClusterSpec
-	state       ProvisionerState
+	state       provisionerState
 
 	cephNamespace string
 	cephName      string
@@ -28,7 +29,7 @@ type Provisioner struct {
 	cephConfig    *config.CephConfig
 }
 
-func (p *Provisioner) getState() ProvisionerState {
+func (p *Provisioner) getState() provisionerState {
 	return p.state
 }
 
@@ -51,23 +52,31 @@ func (p *Provisioner) getPathConfigDir() string {
 	return util.PathGlobalConfigDir + p.cephName + "/"
 }
 
-func (p *Provisioner) setState(state ProvisionerState) error {
+//nolint:unparam // now, setMethod always return nil, if setMethod needs return other value, deletes nolint and implement
+func (p *Provisioner) setState(state provisionerState) error {
 	p.state = state
 	return nil
 }
 
+//nolint:unparam // now, setMethod always return nil, if setMethod needs return other value, deletes nolint and implement
 func (p *Provisioner) setCephCluster(cephCluster hypersdsv1alpha1.CephClusterSpec) error {
 	p.cephCluster = cephCluster
 	return nil
 }
+
+//nolint:unparam // now, setMethod always return nil, if setMethod needs return other value, deletes nolint and implement
 func (p *Provisioner) setCephNamespace(cephNamespace string) error {
 	p.cephNamespace = cephNamespace
 	return nil
 }
+
+//nolint:unparam // now, setMethod always return nil, if setMethod needs return other value, deletes nolint and implement
 func (p *Provisioner) setCephName(cephName string) error {
 	p.cephName = cephName
 	return nil
 }
+
+//nolint:unparam // now, setMethod always return nil, if setMethod needs return other value, deletes nolint and implement
 func (p *Provisioner) setClientSet(clientSet client.Client) error {
 	p.clientSet = clientSet
 	return nil
@@ -79,6 +88,7 @@ func (p *Provisioner) setCephConfig() error {
 	return err
 }
 
+// Run executes the following ceph deployment steps according to the current ceph deployment state
 func (p *Provisioner) Run() error {
 	// Decide deploying node (currently, first node is deploying node)
 	nodeList, err := p.getNodes()
@@ -93,11 +103,12 @@ func (p *Provisioner) Run() error {
 		return err
 	}
 	cephConfig := p.getCephConfig()
-	pathConfFromCr := p.getPathConfigDir() + cephConfNameFromCr
-	pathConf := p.getPathConfigDir() + util.CephConfName
-	pathKeyring := p.getPathConfigDir() + util.CephKeyringName
+	pathConfigDir := p.getPathConfigDir()
+	pathConfFromCr := pathConfigDir + cephConfNameFromCr
+	pathConf := pathConfigDir + util.CephConfName
+	pathKeyring := pathConfigDir + util.CephKeyringName
 
-	switch provisionerState := p.getState(); provisionerState {
+	switch currentState := p.getState(); currentState {
 	case InstallStarted:
 		// Install base package to all nodes
 		err = installBasePackage(nodeList)
@@ -176,15 +187,15 @@ func (p *Provisioner) Run() error {
 
 	case CephBootstrapCommitted:
 		// Copy conf and keyring from deploy node for ceph-common
-		configMap, secret, _, _ := p.checkKubeObjectUpdated()
+		cephConf, cephKeyring, _, _ := p.checkKubeObjectUpdated()
 		// todo check logic?
 
-		err = p.applyHost(wrapper.YamlWrapper, wrapper.ExecWrapper, wrapper.IoUtilWrapper, configMap, secret)
+		err = p.applyHost(wrapper.YamlWrapper, wrapper.ExecWrapper, wrapper.IoUtilWrapper, cephConf, cephKeyring)
 		if err != nil {
 			return err
 		}
 
-		err = p.applyOsd(configMap, secret)
+		err = p.applyOsd(cephConf, cephKeyring)
 		if err != nil {
 			return err
 		}
@@ -193,11 +204,16 @@ func (p *Provisioner) Run() error {
 			return err
 		}
 	}
+	err = wrapper.OsWrapper.RemoveAll(pathConfigDir)
+	if err != nil {
+		fmt.Println("[Provisioner] CephName Driectory Remove Error")
+		return err
+	}
 
 	return nil
 }
 
-func (p *Provisioner) identifyProvisionerState() (ProvisionerState, error) {
+func (p *Provisioner) identifyProvisionerState() (provisionerState, error) {
 	// Decide deploying node (currently, first node is deploying node)
 	nodes, err := p.getNodes()
 	if err != nil {
@@ -208,7 +224,7 @@ func (p *Provisioner) identifyProvisionerState() (ProvisionerState, error) {
 	// Check base pkgs are installed
 	// TODO: May contain error if user removed docker but did not purge dpkg
 	const checkDockerWorkingCmd = "dpkg --list | grep docker-ce"
-	_, err = deployNode.RunSshCmd(wrapper.SshWrapper, checkDockerWorkingCmd)
+	_, err = deployNode.RunSSHCmd(wrapper.SSHWrapper, checkDockerWorkingCmd)
 	// It considers any error that base pkgs are not installed
 	if err != nil {
 		// TODO: Replace stdout to log out
@@ -218,14 +234,14 @@ func (p *Provisioner) identifyProvisionerState() (ProvisionerState, error) {
 
 	// Check Cephadm is installed
 	const checkCephadmInstalledCmd = "cephadm version"
-	outputCephadm, err := deployNode.RunSshCmd(wrapper.SshWrapper, checkCephadmInstalledCmd)
+	outputCephadm, err := deployNode.RunSSHCmd(wrapper.SSHWrapper, checkCephadmInstalledCmd)
 	if err != nil {
 		const cephadmNotFound = "command not found"
 		if strings.Contains(outputCephadm.String(), cephadmNotFound) {
 			return BasePkgInstalled, nil
 		}
 
-		// Other error occurred on RunSshCmd
+		// Other error occurred on RunSSHCmd
 		// TODO: Replace stdout to log out
 		fmt.Println("[identifyProvisionerState] cephadm installation check is failed")
 		return BasePkgInstalled, err
@@ -233,14 +249,14 @@ func (p *Provisioner) identifyProvisionerState() (ProvisionerState, error) {
 
 	// Check Ceph is bootstrapped
 	const checkBootstrappedCmd = "cephadm shell -- ceph -s"
-	outputBootstrap, err := deployNode.RunSshCmd(wrapper.SshWrapper, checkBootstrappedCmd)
+	outputBootstrap, err := deployNode.RunSSHCmd(wrapper.SSHWrapper, checkBootstrappedCmd)
 	if err != nil {
 		const objectNotFound = "ObjectNotFound"
 		if strings.Contains(outputBootstrap.String(), objectNotFound) {
 			return CephadmPkgInstalled, nil
 		}
 
-		// Other error occurred on RunSshCmd
+		// Other error occurred on RunSSHCmd
 		// TODO: Replace stdout to log out
 		fmt.Println("[identifyProvisionerState] ceph bootstrap check is failed")
 		return CephadmPkgInstalled, err
@@ -277,8 +293,7 @@ func (p *Provisioner) identifyProvisionerState() (ProvisionerState, error) {
 }
 
 // TODO: Replace config const to inputs (e.g. K8sConfigMap, etc)
-func (p *Provisioner) checkKubeObjectUpdated() (*corev1.ConfigMap, *corev1.Secret, bool, error) {
-
+func (p *Provisioner) checkKubeObjectUpdated() (confDataBuf, keyringDataBuf []byte, phase bool, err error) {
 	// Check ceph.conf is updated to ConfigMap
 	configMap := &corev1.ConfigMap{}
 	if err := p.clientSet.Get(context.TODO(), types.NamespacedName{Namespace: p.cephNamespace, Name: p.cephName}, configMap); err != nil {
@@ -286,16 +301,21 @@ func (p *Provisioner) checkKubeObjectUpdated() (*corev1.ConfigMap, *corev1.Secre
 		if kubeerrors.IsNotFound(err) {
 			// TODO: Replace stdout to log out
 			fmt.Println("ConfigMap must exist")
-			return nil, nil, false, nil
-		} else {
 			return nil, nil, false, err
 		}
+		return nil, nil, false, err
 	}
 
 	// Bootstrap commit has not occurred
 	if configMap.Data == nil {
 		return nil, nil, false, nil
 	}
+	confData, ok := configMap.Data["conf"]
+	if !ok {
+		fmt.Println("Ceph Conf Data isn't exist")
+		return nil, nil, false, errors.New("Ceph Conf Data isn't exist")
+	}
+	confDataBuf = []byte(confData)
 
 	// Check client.admin.keyring is updated to Secret
 	secret := &corev1.Secret{}
@@ -303,74 +323,81 @@ func (p *Provisioner) checkKubeObjectUpdated() (*corev1.ConfigMap, *corev1.Secre
 		if kubeerrors.IsNotFound(err) {
 			// TODO: Replace stdout to log out
 			fmt.Println("Secret must exist")
-			return nil, nil, false, nil
-		} else {
 			return nil, nil, false, err
 		}
+		return nil, nil, false, err
 	}
 
 	if secret.Data == nil {
 		return nil, nil, false, nil
 	}
 
-	return configMap, secret, true, nil
+	keyringDataBuf, ok = secret.Data["keyring"]
+	if !ok {
+		fmt.Println("Ceph Keyring Data isn't exist")
+		return nil, nil, false, errors.New("Ceph keyring Data isn't exist")
+	}
+
+	return confDataBuf, keyringDataBuf, true, nil
 }
 
-//configmap,cephcluster,
-func NewProvisioner(os wrapper.OsInterface, cephClusterSpec hypersdsv1alpha1.CephClusterSpec, clientSet client.Client, cephNamespace, cephName string) *Provisioner {
+// NewProvisioner creates Provisioner using ceph deployment information and checks the current ceph deployment status in node
+func NewProvisioner(cephClusterSpec hypersdsv1alpha1.CephClusterSpec, clientSet client.Client, cephNamespace, cephName string) (*Provisioner, error) {
+	var err error
+	var currentState provisionerState
 
 	provisionerInstance := &Provisioner{}
 
 	// setCephCluster is only called once, on init
 	// No one is allowed to modify CephCluster
-	err := provisionerInstance.setCephCluster(cephClusterSpec)
+	err = provisionerInstance.setCephCluster(cephClusterSpec)
 	if err != nil {
 		// TODO: Replace stdout to log out
 		fmt.Println("[Provisioner] setCephCluster Error")
-		panic(err)
+		return nil, err
 	}
 	err = provisionerInstance.setClientSet(clientSet)
 	if err != nil {
 		// TODO: Replace stdout to log out
 		fmt.Println("[Provisioner] setCephClientSet Error")
-		panic(err)
+		return nil, err
 	}
 	err = provisionerInstance.setCephNamespace(cephNamespace)
 	if err != nil {
 		// TODO: Replace stdout to log out
 		fmt.Println("[Provisioner] setCephNamespace Error")
-		panic(err)
+		return nil, err
 	}
 	err = provisionerInstance.setCephName(cephName)
 	if err != nil {
 		// TODO: Replace stdout to log out
 		fmt.Println("[Provisioner] setCephName Error")
-		panic(err)
+		return nil, err
 	}
 
 	pathConfigDir := provisionerInstance.getPathConfigDir()
 
-	err = os.MkdirAll(pathConfigDir, 0644)
+	err = wrapper.OsWrapper.MkdirAll(pathConfigDir, 0644)
 	if err != nil {
 		fmt.Println("[Provisioner] CephName Driectory Create Error")
-		panic(err)
+		return nil, err
 	}
 
 	// identifyProvisionerState is only called once, on init
-	// No one is allowed to modify ProvisionerState
-	provisionerState, err := provisionerInstance.identifyProvisionerState()
+	// No one is allowed to modify provisionerState
+	currentState, err = provisionerInstance.identifyProvisionerState()
 	if err != nil {
 		// TODO: Replace stdout to log out
 		fmt.Println("[Provisioner] identifyProvisionerState Error")
-		panic(err)
+		return nil, err
 	}
 
-	err = provisionerInstance.setState(provisionerState)
+	err = provisionerInstance.setState(currentState)
 	if err != nil {
 		// TODO: Replace stdout to log out
 		fmt.Println("[Provisioner] setState Error")
-		panic(err)
+		return nil, err
 	}
 
-	return provisionerInstance
+	return provisionerInstance, nil
 }

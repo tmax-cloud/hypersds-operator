@@ -1,18 +1,23 @@
 package provisioner
 
-// ProvisionerState is current installation phase of provisioner
-type ProvisionerState string
+// provisionerState is current installation phase of provisioner
+type provisionerState string
 
 const (
-	InstallStarted         ProvisionerState = "Initialized"
-	BasePkgInstalled       ProvisionerState = "BaseInstalled"
-	CephadmPkgInstalled    ProvisionerState = "AdmInstalled"
-	CephBootstrapped       ProvisionerState = "Bootstrapped"
-	CephBootstrapCommitted ProvisionerState = "Committed"
-	CephOsdDeployed        ProvisionerState = "OsdDeployed"
+	// InstallStarted indicates Initialized phase
+	InstallStarted provisionerState = "Initialized"
+	// BasePkgInstalled indicates BaseInstalled phase
+	BasePkgInstalled provisionerState = "BaseInstalled"
+	// CephadmPkgInstalled indicates AdmInstalled phase
+	CephadmPkgInstalled provisionerState = "AdmInstalled"
+	// CephBootstrapped indicates Bootstrapped phase
+	CephBootstrapped provisionerState = "Bootstrapped"
+	// CephBootstrapCommitted indicates Committed phase
+	CephBootstrapCommitted provisionerState = "Committed"
+	// CephOsdDeployed indicates OsdDeployed phase
+	CephOsdDeployed provisionerState = "OsdDeployed"
 )
 
-// File name, path, etc
 const (
 	cephConfNameFromCr = "ceph_initial.conf"
 	pathConfFromAdm    = "/etc/ceph/ceph.conf"

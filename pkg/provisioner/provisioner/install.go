@@ -10,7 +10,6 @@ import (
 	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
 	"github.com/tmax-cloud/hypersds-operator/pkg/provisioner/node"
 	"github.com/tmax-cloud/hypersds-operator/pkg/provisioner/osd"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func (p *Provisioner) updateCephClusterToOp() error {
@@ -54,11 +53,11 @@ func bootstrapCephadm(targetNode *node.Node, pathConfFromCr string) error {
 
 	deployNodeHostSpec := targetNode.GetHostSpec()
 
-	monIp := deployNodeHostSpec.GetAddr()
+	monIP := deployNodeHostSpec.GetAddr()
 
 	fmt.Println("[bootstrapCephadm] executing bootstrap")
 	admBootstrapCmd := fmt.Sprintf("cephadm --image %s bootstrap --mon-ip %s --config %s",
-		cephImageName, monIp, pathConfFromCr)
+		cephImageName, monIP, pathConfFromCr)
 	err = processCmdOnNode(targetNode, admBootstrapCmd)
 	if err != nil {
 		return err
@@ -98,7 +97,9 @@ func installCephadm(targetNode *node.Node) error {
 
 	// does something in command need to be changed, related to cephadm version?
 	fmt.Println("[installCephadm] executing curl cephadm gpg key")
-	addCephadmRepoCmd := "curl https://download.ceph.com/keys/release.asc | gpg --no-default-keyring --keyring /tmp/fix.gpg --import - && gpg --no-default-keyring --keyring /tmp/fix.gpg --export > /etc/apt/trusted.gpg.d/ceph.release.gpg && rm /tmp/fix.gpg"
+	addCephadmRepoCmd := "curl https://download.ceph.com/keys/release.asc | " +
+		"gpg --no-default-keyring --keyring /tmp/fix.gpg --import - && " +
+		"gpg --no-default-keyring --keyring /tmp/fix.gpg --export > /etc/apt/trusted.gpg.d/ceph.release.gpg && rm /tmp/fix.gpg"
 	err = processCmdOnNode(targetNode, addCephadmRepoCmd)
 	if err != nil {
 		return err
@@ -138,7 +139,7 @@ func installBasePackage(targetNodeList []*node.Node) error {
 		}
 	}
 
-	// use standard verison in OS
+	// use standard version in OS
 	fmt.Println("[installBasePackage] executing apt-get install ...")
 	const installPkgCmd = "apt-get install -y apt-transport-https ca-certificates curl software-properties-common ntpdate chrony"
 	for _, n := range targetNodeList {
@@ -196,20 +197,22 @@ func installBasePackage(targetNodeList []*node.Node) error {
 	return nil
 }
 
-func (p *Provisioner) applyOsd(configMap *corev1.ConfigMap, secret *corev1.Secret) error {
+func (p *Provisioner) applyOsd(cephConf, cephKeyring []byte) error {
+	var err error
+
 	fmt.Println("[applyOsd] get osds from CephOrch")
 
 	cephName := p.getCephName()
 	pathConfigDir := p.getPathConfigDir()
 
 	cmd := []string{"orch", "ls", "--service_type", "osd", "--export", "--refresh"}
-	output, err := util.RunCephCmd(wrapper.OsWrapper, wrapper.ExecWrapper, wrapper.IoUtilWrapper, configMap, secret, cephName, cmd...)
+	output, err := util.RunCephCmd(wrapper.OsWrapper, wrapper.ExecWrapper, wrapper.IoUtilWrapper, cephConf, cephKeyring, cephName, cmd...)
 	if err != nil {
 		return processExecError(err, output)
 	}
 
 	var osdsFromOrch []*osd.Osd
-	if !strings.Contains("No services reported", output.String()) {
+	if !strings.Contains(output.String(), "No services reported") {
 		rawOsdsFromOrch := output.Bytes()
 
 		osdsFromOrch, err = osd.NewOsdsFromCephOrch(wrapper.YamlWrapper, rawOsdsFromOrch)
@@ -231,64 +234,66 @@ func (p *Provisioner) applyOsd(configMap *corev1.ConfigMap, secret *corev1.Secre
 	for _, osdOrch := range osdsFromOrch {
 		osdService := osdOrch.GetService()
 
-		osdServiceId := osdService.GetServiceId()
+		osdServiceID := osdService.GetServiceID()
 
-		osdMap[osdServiceId] = osdOrch
-		removeOsdMap[osdServiceId] = true
+		osdMap[osdServiceID] = osdOrch
+		removeOsdMap[osdServiceID] = true
 	}
 
 	fmt.Println("[applyOsd] compare osds between CephCR and CephOrch")
 
 	for _, osdCephCr := range osdsFromCephCr {
 		osdService := osdCephCr.GetService()
+		osdServiceID := osdService.GetServiceID()
+		osdOrch, exist := osdMap[osdServiceID]
 
-		osdServiceId := osdService.GetServiceId()
+		var addDeviceList, removeDeviceList []string
 
-		osdOrch, exist := osdMap[osdServiceId]
 		if exist {
-			addDeviceList, removeDeviceList, err := osdOrch.CompareDataDevices(osdCephCr)
+			addDeviceList, removeDeviceList, err = osdOrch.CompareDataDevices(osdCephCr)
 			if err != nil {
 				return err
 			}
-			removeOsdMap[osdServiceId] = false
-			//todo remove disk ....
-			fmt.Printf("[applyOsd] osd service: %s, add: %+q, remove: %+q\n", osdServiceId, addDeviceList, removeDeviceList)
+			removeOsdMap[osdServiceID] = false
+			// todo remove disk ....
+			fmt.Printf("[applyOsd] osd service: %s, add: %+q, remove: %+q\n", osdServiceID, addDeviceList, removeDeviceList)
 		}
 
 		fmt.Println("[applyOsd] make osd yaml")
 
-		osdFileName := pathConfigDir + osdServiceId + ".yaml"
+		osdFileName := pathConfigDir + osdServiceID + ".yaml"
 		err = osdCephCr.MakeYmlFile(wrapper.YamlWrapper, wrapper.IoUtilWrapper, osdFileName)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("[applyOsd] apply osd service: %s\n", osdServiceId)
+		fmt.Printf("[applyOsd] apply osd service: %s\n", osdServiceID)
 
 		applyCmd := []string{"orch", "apply", "-i", osdFileName}
-		output, err = util.RunCephCmd(wrapper.OsWrapper, wrapper.ExecWrapper, wrapper.IoUtilWrapper, configMap, secret, cephName, applyCmd...)
+		output, err = util.RunCephCmd(wrapper.OsWrapper, wrapper.ExecWrapper, wrapper.IoUtilWrapper, cephConf, cephKeyring, cephName, applyCmd...)
 		if err != nil {
 			return processExecError(err, output)
 		}
 	}
-	for osdServiceId, value := range removeOsdMap {
-		if value {
-			osdServiceName := "osd." + osdServiceId
+	for osdServiceID, value := range removeOsdMap {
+		if !value {
+			continue
+		}
+		osdServiceName := "osd." + osdServiceID
 
-			fmt.Printf("[applyOsd] remove osd service: %s\n", osdServiceName)
+		fmt.Printf("[applyOsd] remove osd service: %s\n", osdServiceName)
 
-			removeCmd := []string{"orch", "rm", osdServiceName}
-			output, err = util.RunCephCmd(wrapper.OsWrapper, wrapper.ExecWrapper, wrapper.IoUtilWrapper, configMap, secret, cephName, removeCmd...)
-			if err != nil {
-				return processExecError(err, output)
-			}
+		removeCmd := []string{"orch", "rm", osdServiceName}
+		output, err = util.RunCephCmd(wrapper.OsWrapper, wrapper.ExecWrapper, wrapper.IoUtilWrapper, cephConf, cephKeyring, cephName, removeCmd...)
+		if err != nil {
+			return processExecError(err, output)
 		}
 	}
 	return nil
 }
 
 func processCmdOnNode(targetNode *node.Node, command string) error {
-	output, err := targetNode.RunSshCmd(wrapper.SshWrapper, command)
+	output, err := targetNode.RunSSHCmd(wrapper.SSHWrapper, command)
 	return processExecError(err, output)
 }
 
@@ -307,9 +312,9 @@ func processExecError(errExec error, output bytes.Buffer) error {
 			}
 		}
 		return errExec
-	} else {
-		_, err := output.WriteTo(os.Stdout)
-
-		return err
 	}
+
+	_, err := output.WriteTo(os.Stdout)
+
+	return err
 }

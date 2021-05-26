@@ -11,15 +11,18 @@ import (
 	"github.com/tmax-cloud/hypersds-operator/pkg/common/util"
 	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
 	"github.com/tmax-cloud/hypersds-operator/pkg/provisioner/node"
-	corev1 "k8s.io/api/core/v1"
 )
 
-func (p *Provisioner) applyHost(yamlWrapper wrapper.YamlInterface, execWrapper wrapper.ExecInterface, ioUtilWrapper wrapper.IoUtilInterface, configMap *corev1.ConfigMap, secret *corev1.Secret) error {
+func (p *Provisioner) applyHost(yamlWrapper wrapper.YamlInterface, execWrapper wrapper.ExecInterface, ioUtilWrapper wrapper.IoUtilInterface, cephConf, cephKeyring []byte) error {
 	// Get host list to apply from CephCluster CR
+	var err error
+	var nodes []*node.Node
+	var cephadmCurrentHostsBuf, hostAuthGetBuf bytes.Buffer
+
 	cephHostsToApply := []*node.HostSpec{}
 	cephHostNodesToApply := map[string]*node.Node{}
 
-	nodes, err := p.getNodes()
+	nodes, err = p.getNodes()
 	if err != nil {
 		return err
 	}
@@ -41,7 +44,7 @@ func (p *Provisioner) applyHost(yamlWrapper wrapper.YamlInterface, execWrapper w
 	cephHostCheckCmd := []string{"orch", "host", "ls", "yaml"}
 
 	fmt.Println("Executing: " + strings.Join(cephHostCheckCmd, ","))
-	cephadmCurrentHostsBuf, err := util.RunCephCmd(wrapper.OsWrapper, execWrapper, ioUtilWrapper, configMap, secret, cephName, cephHostCheckCmd...)
+	cephadmCurrentHostsBuf, err = util.RunCephCmd(wrapper.OsWrapper, execWrapper, ioUtilWrapper, cephConf, cephKeyring, cephName, cephHostCheckCmd...)
 	if err != nil {
 		fmt.Println("Error: " + cephadmCurrentHostsBuf.String())
 		return err
@@ -77,7 +80,7 @@ func (p *Provisioner) applyHost(yamlWrapper wrapper.YamlInterface, execWrapper w
 	hostAuthGetCmd := []string{"cephadm", "get-pub-key"}
 
 	fmt.Println("Executing: " + strings.Join(hostAuthGetCmd, ","))
-	hostAuthGetBuf, err := util.RunCephCmd(wrapper.OsWrapper, execWrapper, ioUtilWrapper, configMap, secret, cephName, hostAuthGetCmd...)
+	hostAuthGetBuf, err = util.RunCephCmd(wrapper.OsWrapper, execWrapper, ioUtilWrapper, cephConf, cephKeyring, cephName, hostAuthGetCmd...)
 	if err != nil {
 		fmt.Println("Error: " + hostAuthGetBuf.String())
 		return err
@@ -107,18 +110,18 @@ func (p *Provisioner) applyHost(yamlWrapper wrapper.YamlInterface, execWrapper w
 			}
 
 			// Copy generated key
-			var hostAuthApplyOutBuf bytes.Buffer
-			var hostAuthApplyErrBuf bytes.Buffer
-			nodeId := cephHostNodesToApply[hostNameToApply].GetUserId()
-			nodeIp := hostToApply.GetAddr()
+			var hostAuthApplyOutBuf, hostAuthApplyErrBuf, hostApplyBuf bytes.Buffer
+
+			nodeID := cephHostNodesToApply[hostNameToApply].GetUserID()
+			nodeIP := hostToApply.GetAddr()
 			nodePw := cephHostNodesToApply[hostNameToApply].GetUserPw()
 
 			const sshKeyCheckOpt = "-oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null"
 			sshPassCmd := fmt.Sprintf("sshpass -f <(printf '%%s\\n' %s)", nodePw)
-			hostAuthApplyCmd := fmt.Sprintf("%s ssh-copy-id %s -f -i %s %s@%s", sshPassCmd, sshKeyCheckOpt, pathHostPub, nodeId, nodeIp)
+			hostAuthApplyCmd := fmt.Sprintf("%s ssh-copy-id %s -f -i %s %s@%s", sshPassCmd, sshKeyCheckOpt, pathHostPub, nodeID, nodeIP)
 
 			fmt.Println("Executing: " + hostAuthApplyCmd)
-			err = execWrapper.CommandExecute(&hostAuthApplyOutBuf, &hostAuthApplyErrBuf, ctx, "bash", "-c", hostAuthApplyCmd)
+			err = execWrapper.CommandExecute(ctx, &hostAuthApplyOutBuf, &hostAuthApplyErrBuf, "bash", "-c", hostAuthApplyCmd)
 			if err != nil {
 				fmt.Println("Error: " + hostAuthApplyErrBuf.String())
 				return err
@@ -128,7 +131,7 @@ func (p *Provisioner) applyHost(yamlWrapper wrapper.YamlInterface, execWrapper w
 			hostApplyCmd := []string{"orch", "apply", "-i", hostFileName}
 
 			fmt.Println("Executing: " + strings.Join(hostApplyCmd, ","))
-			hostApplyBuf, err := util.RunCephCmd(wrapper.OsWrapper, execWrapper, ioUtilWrapper, configMap, secret, cephName, hostAuthGetCmd...)
+			hostApplyBuf, err = util.RunCephCmd(wrapper.OsWrapper, execWrapper, ioUtilWrapper, cephConf, cephKeyring, cephName, hostAuthGetCmd...)
 
 			if err != nil {
 				fmt.Println("Error: " + hostApplyBuf.String())
@@ -141,7 +144,7 @@ func (p *Provisioner) applyHost(yamlWrapper wrapper.YamlInterface, execWrapper w
 
 	// Check the result on ceph cluster hosts
 	fmt.Println("Executing: " + strings.Join(cephHostCheckCmd, ","))
-	cephadmCurrentHostsBuf, err = util.RunCephCmd(wrapper.OsWrapper, execWrapper, ioUtilWrapper, configMap, secret, cephName, cephHostCheckCmd...)
+	cephadmCurrentHostsBuf, err = util.RunCephCmd(wrapper.OsWrapper, execWrapper, ioUtilWrapper, cephConf, cephKeyring, cephName, cephHostCheckCmd...)
 	if err != nil {
 		fmt.Println("Error: " + cephadmCurrentHostsBuf.String())
 		return err

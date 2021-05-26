@@ -8,16 +8,26 @@ import (
 	"github.com/tmax-cloud/hypersds-operator/pkg/provisioner/service"
 )
 
-type OsdSpec struct {
-	DataDevices     Device   `yaml:"data_devices,omitempty"`
-	DbDevices       Device   `yaml:"db_devices,omitempty"`
-	WalDevices      Device   `yaml:"wal_devices,omitempty"`
-	JournalDevices  Device   `yaml:"journal_devices,omitempty"`
+// Spec is struct to define ceph osd spec of ceph spec yaml
+type Spec struct {
+	// DataDevices indicates data_devices field
+	DataDevices Device `yaml:"data_devices,omitempty"`
+	// DbDevices indicates db_devices field
+	DbDevices Device `yaml:"db_devices,omitempty"`
+	// WalDevices indicates wal_devices field
+	WalDevices Device `yaml:"wal_devices,omitempty"`
+	// JournalDevices indicates journal_devices field
+	JournalDevices Device `yaml:"journal_devices,omitempty"`
+	// DataDirectories indicates data_directories field
 	DataDirectories []string `yaml:"data_directories,omitempty"`
-	OsdsPerDevice   int      `yaml:"osds_per_device,omitempty"`
-	Objectstore     string   `yaml:"objectstore,omitempty"`
-	Encrypted       bool     `yaml:"encrypted,omitempty"`
-	Filter_logic    string   `yaml:"filter_logic,omitempty"`
+	// OsdsPerDevice indicates osds_per_device field
+	OsdsPerDevice int `yaml:"osds_per_device,omitempty"`
+	// Objectstore indicates objectstore field
+	Objectstore string `yaml:"objectstore,omitempty"`
+	// Encrypted indicates encrypted field
+	Encrypted bool `yaml:"encrypted,omitempty"`
+	// FilterLogic indicates filter_logic field
+	FilterLogic string `yaml:"filter_logic,omitempty"`
 	/*
 	    				db_slots=None,  # type: Optional[int]
 	                    wal_slots=None,  # type: Optional[int]
@@ -31,43 +41,48 @@ type OsdSpec struct {
 	*/
 }
 
+// Osd is struct to define ceph osd service of ceph spec yaml
 type Osd struct {
+	// Service defines ceph service spec of ceph spec yaml
 	Service service.Service `yaml:",inline"`
-	Spec    OsdSpec         `yaml:"spec,omitempty"`
+	// Spec defines ceph osd spec of ceph spec yaml
+	Spec Spec `yaml:"spec,omitempty"`
 }
 
-func (o *Osd) SetService(s service.Service) error {
-	o.Service = s
+// SetService sets Service to value
+func (o *Osd) SetService(s *service.Service) error {
+	o.Service = *s
 	return nil
 }
 
-func (o *Osd) SetDataDevices(dataDevices Device) error {
-	o.Spec.DataDevices = dataDevices
+// SetDataDevices sets DataDevices in Spec to value
+func (o *Osd) SetDataDevices(dataDevices *Device) error {
+	o.Spec.DataDevices = *dataDevices
 	return nil
 }
 
+// GetService gets value of Service
 func (o *Osd) GetService() service.Service {
 	return o.Service
 }
 
+// GetDataDevices gets value of DataDevices in Spec
 func (o *Osd) GetDataDevices() Device {
 	return o.Spec.DataDevices
 }
 
-func (o *Osd) CompareDataDevices(targetOsd *Osd) ([]string, []string, error) {
+// CompareDataDevices compares between Osd and targetOsd and returns addDeviceList,removeDeviceList
+func (o *Osd) CompareDataDevices(targetOsd *Osd) (addDeviceList, removeDeviceList []string, err error) {
 	// o: orch osd, targetOsd: cephCr osd
 	dataDevices := o.GetDataDevices()
 
-	devicePaths := dataDevices.GetPaths()
+	devicePaths := dataDevices.getPaths()
 
 	targetDataDevices := targetOsd.GetDataDevices()
 
-	targetDevicePaths := targetDataDevices.GetPaths()
+	targetDevicePaths := targetDataDevices.getPaths()
 
-	var deviceMap map[string]bool
-	var addDeviceList, removeDeviceList []string
-
-	deviceMap = make(map[string]bool)
+	deviceMap := map[string]bool{}
 
 	for _, device := range devicePaths {
 		deviceMap[device] = false
@@ -89,6 +104,7 @@ func (o *Osd) CompareDataDevices(targetOsd *Osd) ([]string, []string, error) {
 	return addDeviceList, removeDeviceList, nil
 }
 
+// MakeYmlFile creates ceph osd service file using Osd
 func (o *Osd) MakeYmlFile(yaml wrapper.YamlInterface, ioUtilWrapper wrapper.IoUtilInterface, fileName string) error {
 	osdYaml, err := yaml.Marshal(o)
 	if err != nil {
@@ -99,10 +115,11 @@ func (o *Osd) MakeYmlFile(yaml wrapper.YamlInterface, ioUtilWrapper wrapper.IoUt
 	return err
 }
 
+// NewOsdsFromCephCr reads osd information from cephclusterspec and creates Osd list
 func NewOsdsFromCephCr(cephSpec hypersdsv1alpha1.CephClusterSpec) ([]*Osd, error) {
 	var osds []*Osd
 
-	for _, osdSpec := range cephSpec.Osd {
+	for _, Spec := range cephSpec.Osd {
 		var hosts []string
 		var osd Osd
 		var dataDevices Device
@@ -110,7 +127,7 @@ func NewOsdsFromCephCr(cephSpec hypersdsv1alpha1.CephClusterSpec) ([]*Osd, error
 		var placement service.Placement
 
 		// set Placement, Service
-		hosts = append(hosts, osdSpec.HostName)
+		hosts = append(hosts, Spec.HostName)
 		err := placement.SetHosts(hosts)
 		if err != nil {
 			return nil, err
@@ -123,20 +140,20 @@ func NewOsdsFromCephCr(cephSpec hypersdsv1alpha1.CephClusterSpec) ([]*Osd, error
 		if err != nil {
 			return nil, err
 		}
-		err = s.SetServiceId("osd_" + osdSpec.HostName)
+		err = s.SetServiceID("osd_" + Spec.HostName)
 		if err != nil {
 			return nil, err
 		}
 		// set device
-		err = dataDevices.SetPaths(osdSpec.Devices)
+		err = dataDevices.setPaths(Spec.Devices)
 		if err != nil {
 			return nil, err
 		}
-		err = osd.SetDataDevices(dataDevices)
+		err = osd.SetDataDevices(&dataDevices)
 		if err != nil {
 			return nil, err
 		}
-		err = osd.SetService(s)
+		err = osd.SetService(&s)
 		if err != nil {
 			return nil, err
 		}
@@ -146,8 +163,8 @@ func NewOsdsFromCephCr(cephSpec hypersdsv1alpha1.CephClusterSpec) ([]*Osd, error
 	return osds, nil
 }
 
+// NewOsdsFromCephOrch reads osd information from ceph orch and creates Osd list
 func NewOsdsFromCephOrch(yaml wrapper.YamlInterface, rawOsdsFromOrch []byte) ([]*Osd, error) {
-
 	var osds []*Osd
 	readerOrch := bytes.NewReader(rawOsdsFromOrch)
 	dec := yaml.NewDecoder(readerOrch)
