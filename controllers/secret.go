@@ -14,26 +14,13 @@ import (
 const SecretName = "ceph-secret"
 
 func (r *CephClusterReconciler) syncSecret() error {
-	if err := r.getSecret(); err == nil {
+	if _, err := r.getSecret(); err == nil {
 		return nil
 	} else if !errors.IsNotFound(err) {
 		return err
 	}
 
 	klog.Infof("syncSecret: creating secret %s", SecretName)
-	updated, found, err := r.isAccessConfigMapUpdated()
-	if err != nil {
-		return err
-	} else if !found {
-		return nil
-	}
-	if updated {
-		// This is the case when the secret is deleted after ceph cluster is completed.
-		if err2 := r.updateAccessConfigMapAnnotation(false); err2 != nil {
-			return err2
-		}
-	}
-
 	newSecret, err := r.newSecret()
 	if err != nil {
 		return err
@@ -44,9 +31,12 @@ func (r *CephClusterReconciler) syncSecret() error {
 	return nil
 }
 
-func (r *CephClusterReconciler) getSecret() error {
+func (r *CephClusterReconciler) getSecret() (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
-	return r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: SecretName}, secret)
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: SecretName}, secret); err != nil {
+		return nil, err
+	}
+	return secret, nil
 }
 
 func (r *CephClusterReconciler) newSecret() (*corev1.Secret, error) {
@@ -62,4 +52,22 @@ func (r *CephClusterReconciler) newSecret() (*corev1.Secret, error) {
 		return nil, err
 	}
 	return secret, nil
+}
+
+func (r *CephClusterReconciler) isSecretUpdated() (updated bool, err error) {
+	secret, err := r.getSecret()
+	if err != nil {
+		return false, err
+	}
+
+	if secret.Data == nil {
+		return false, nil
+	}
+
+	_, found := secret.Data["keyring"]
+	if !found {
+		return false, nil
+	}
+
+	return true, nil
 }

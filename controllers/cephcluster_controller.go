@@ -61,10 +61,7 @@ func (r *CephClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	r.Cluster = cachedCluster.DeepCopy()
 
 	syncAll := func() error {
-		if err := r.syncAccessConfig(); err != nil {
-			return err
-		}
-		if err := r.syncInstallConfig(); err != nil {
+		if err := r.syncConfigMap(); err != nil {
 			return err
 		}
 		if err := r.syncSecret(); err != nil {

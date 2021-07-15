@@ -5,17 +5,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 var _ = Describe("syncSecret", func() {
-	Context("1. with no secret, updated=no", func() {
-		cm := newConfigMap(AccessConfigMapName)
-		cm.Annotations = map[string]string{
-			"updated": "no",
-		}
-		r := createFakeCephClusterReconciler(cm)
+	Context("1. without secret", func() {
+		r := createFakeCephClusterReconciler()
 		err := r.syncSecret()
 
 		It("Should not return error", func() {
@@ -28,37 +23,8 @@ var _ = Describe("syncSecret", func() {
 		})
 	})
 
-	Context("2. with no secret, updated=yes", func() {
-		cm := newConfigMap(AccessConfigMapName)
-		cm.Annotations = map[string]string{
-			"updated": "yes",
-		}
-		r := createFakeCephClusterReconciler(cm)
-		err := r.syncSecret()
-
-		It("Should not return error", func() {
-			Expect(err).Should(BeNil())
-		})
-		It("Should create a secret", func() {
-			s := &corev1.Secret{}
-			err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: SecretName}, s)
-			Expect(err).Should(BeNil())
-		})
-		It("Should update configmap annotation(updated=no)", func() {
-			cm := &corev1.ConfigMap{}
-			err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: AccessConfigMapName}, cm)
-			Expect(err).Should(BeNil())
-			Expect(cm.Annotations["updated"]).Should(Equal("no"))
-		})
-	})
-
-	Context("3. with secret", func() {
-		s := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      SecretName,
-				Namespace: testCephClusterNs,
-			},
-		}
+	Context("2. with secret", func() {
+		s := newSecret()
 		r := createFakeCephClusterReconciler(s)
 		err := r.syncSecret()
 
@@ -69,6 +35,66 @@ var _ = Describe("syncSecret", func() {
 			s := &corev1.Secret{}
 			err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: SecretName}, s)
 			Expect(err).Should(BeNil())
+		})
+	})
+})
+
+var _ = Describe("isSecretUpdated", func() {
+	Context("1. with no secret", func() {
+		r := createFakeCephClusterReconciler()
+		updated, err := r.isSecretUpdated()
+
+		It("Should return error", func() {
+			Expect(err).ShouldNot(BeNil())
+		})
+		It("Should return updated false", func() {
+			Expect(updated).Should(BeFalse())
+		})
+	})
+
+	Context("2. with secret without data", func() {
+		s := newSecret()
+		s.Data = nil
+		r := createFakeCephClusterReconciler(s)
+		updated, err := r.isSecretUpdated()
+
+		It("Should not return error", func() {
+			Expect(err).Should(BeNil())
+		})
+		It("Should return updated false", func() {
+			Expect(updated).Should(BeFalse())
+		})
+	})
+
+	Context("3. with secret without ceph keyring data", func() {
+		s := newSecret()
+		s.Data = map[string][]byte{
+			"updated": {65, 66, 67, 226, 130, 172},
+		}
+		r := createFakeCephClusterReconciler(s)
+		updated, err := r.isSecretUpdated()
+
+		It("Should not return error", func() {
+			Expect(err).Should(BeNil())
+		})
+		It("Should return updated false", func() {
+			Expect(updated).Should(BeFalse())
+		})
+	})
+
+	Context("4. with configmap with ceph access data", func() {
+		s := newSecret()
+		s.Data = map[string][]byte{
+			"keyring": {65, 66, 67, 226, 130, 172},
+		}
+		r := createFakeCephClusterReconciler(s)
+		updated, err := r.isSecretUpdated()
+
+		It("Should not return error", func() {
+			Expect(err).Should(BeNil())
+		})
+		It("Should return updated true", func() {
+			Expect(updated).Should(BeTrue())
 		})
 	})
 })
