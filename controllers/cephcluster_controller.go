@@ -43,8 +43,7 @@ type CephClusterReconciler struct {
 
 // +kubebuilder:rbac:groups=hypersds.tmax.io,resources=cephclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=hypersds.tmax.io,resources=cephclusters/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources=pods;configmaps;secrets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reads that state of the cluster for a CephCluster object and makes changes based on the state read
 func (r *CephClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -61,10 +60,7 @@ func (r *CephClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	r.Cluster = cachedCluster.DeepCopy()
 
 	syncAll := func() error {
-		if err := r.syncAccessConfig(); err != nil {
-			return err
-		}
-		if err := r.syncInstallConfig(); err != nil {
+		if err := r.syncConfigMap(); err != nil {
 			return err
 		}
 		if err := r.syncSecret(); err != nil {

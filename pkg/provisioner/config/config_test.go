@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/tmax-cloud/hypersds-operator/pkg/common/util"
 	"os"
 
 	"github.com/golang/mock/gomock"
@@ -148,7 +149,7 @@ var _ = Describe("Config Test", func() {
 		It("should return nil with configmap", func() {
 			configMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
+					Name:      "test" + util.K8sConfigMapSuffix,
 					Namespace: "test",
 				},
 			}
@@ -172,7 +173,7 @@ var _ = Describe("Config Test", func() {
 		It("should return nil with secret", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
+					Name:      "test" + util.K8sSecretSuffix,
 					Namespace: "test",
 				},
 			}

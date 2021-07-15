@@ -6,24 +6,28 @@ import (
 	. "github.com/onsi/gomega"
 	hypersdsv1alpha1 "github.com/tmax-cloud/hypersds-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var _ = Describe("syncAccessConfig", func() {
+var _ = Describe("syncConfigMap", func() {
 	Context("1. with no configmap", func() {
 		r := createFakeCephClusterReconciler()
-		err := r.syncAccessConfig()
+		err := r.syncConfigMap()
 
 		It("Should not return error", func() {
 			Expect(err).Should(BeNil())
 		})
-		It("Should create a configmap", func() {
+		It("Should create a configmap with suffix", func() {
 			cm := &corev1.ConfigMap{}
-			err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: AccessConfigMapName}, cm)
+			err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: r.getConfigMapName()}, cm)
 			Expect(err).Should(BeNil())
+		})
+		It("Should not create a configmap without suffix", func() {
+			cm := &corev1.ConfigMap{}
+			err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: r.Cluster.Name}, cm)
+			Expect(err).ShouldNot(BeNil())
 		})
 		It("Should update state to Creating", func() {
 			cc := &hypersdsv1alpha1.CephCluster{}
@@ -42,123 +46,76 @@ var _ = Describe("syncAccessConfig", func() {
 	})
 
 	Context("2. with configmap", func() {
-		cm := newConfigMap(AccessConfigMapName)
+		cm := newConfigMap()
 		r := createFakeCephClusterReconciler(cm)
-		err := r.syncAccessConfig()
+		err := r.syncConfigMap()
 
 		It("Should not return error", func() {
 			Expect(err).Should(BeNil())
 		})
 		It("Should not delete the configmap", func() {
 			cm := &corev1.ConfigMap{}
-			err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: AccessConfigMapName}, cm)
+			err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: r.getConfigMapName()}, cm)
 			Expect(err).Should(BeNil())
 		})
 	})
 })
 
-var _ = Describe("isAccessConfigMapUpdated", func() {
+var _ = Describe("isConfigMapUpdated", func() {
 	Context("1. with no configmap", func() {
 		r := createFakeCephClusterReconciler()
-		_, found, err := r.isAccessConfigMapUpdated()
-
-		It("Should not return error", func() {
-			Expect(err).Should(BeNil())
-		})
-		It("Should return not found", func() {
-			Expect(found).Should(BeFalse())
-		})
-	})
-
-	Context("2. with configmap without annotation", func() {
-		cm := newConfigMap(AccessConfigMapName)
-		cm.Annotations = nil
-		r := createFakeCephClusterReconciler(cm)
-		_, _, err := r.isAccessConfigMapUpdated()
+		updated, err := r.isConfigMapUpdated()
 
 		It("Should return error", func() {
 			Expect(err).ShouldNot(BeNil())
 		})
+		It("Should return updated false", func() {
+			Expect(updated).Should(BeFalse())
+		})
 	})
 
-	Context("3. with configmap with annotation(updated=no)", func() {
-		cm := newConfigMap(AccessConfigMapName)
-		cm.Annotations = map[string]string{
-			"updated": "no",
-		}
+	Context("2. with empty configmap", func() {
+		cm := newConfigMap()
 		r := createFakeCephClusterReconciler(cm)
-		u, found, err := r.isAccessConfigMapUpdated()
+		updated, err := r.isConfigMapUpdated()
 
 		It("Should not return error", func() {
 			Expect(err).Should(BeNil())
 		})
 		It("Should return updated false", func() {
-			Expect(u).Should(BeFalse())
-		})
-		It("Should return found configmap", func() {
-			Expect(found).Should(BeTrue())
+			Expect(updated).Should(BeFalse())
 		})
 	})
 
-	Context("4. with configmap with annotation(updated=yes)", func() {
-		cm := newConfigMap(AccessConfigMapName)
-		cm.Annotations = map[string]string{
-			"updated": "yes",
+	Context("3. with configmap without ceph config key", func() {
+		cm := newConfigMap()
+		cm.Data = map[string]string{
+			"test-key": "test-value",
 		}
 		r := createFakeCephClusterReconciler(cm)
-		u, found, err := r.isAccessConfigMapUpdated()
+		updated, err := r.isConfigMapUpdated()
+
+		It("Should not return error", func() {
+			Expect(err).Should(BeNil())
+		})
+		It("Should return updated false", func() {
+			Expect(updated).Should(BeFalse())
+		})
+	})
+
+	Context("4. with ceph config configmap", func() {
+		cm := newConfigMap()
+		cm.Data = map[string]string{
+			"conf": "test-value",
+		}
+		r := createFakeCephClusterReconciler(cm)
+		updated, err := r.isConfigMapUpdated()
 
 		It("Should not return error", func() {
 			Expect(err).Should(BeNil())
 		})
 		It("Should return updated true", func() {
-			Expect(u).Should(BeTrue())
-		})
-		It("Should return found configmap", func() {
-			Expect(found).Should(BeTrue())
-		})
-	})
-})
-
-var _ = Describe("updateAccessConfigMapAnnotation", func() {
-	Context("1. with no configmap", func() {
-		r := createFakeCephClusterReconciler()
-		err := r.updateAccessConfigMapAnnotation(true)
-
-		It("Should return not found error", func() {
-			Expect(errors.IsNotFound(err)).Should(BeTrue())
-		})
-	})
-
-	Context("2. with configmap and updated to no", func() {
-		cm := newConfigMap(AccessConfigMapName)
-		r := createFakeCephClusterReconciler(cm)
-		err := r.updateAccessConfigMapAnnotation(false)
-
-		It("Should not return error", func() {
-			Expect(err).Should(BeNil())
-		})
-		It("Should configmap has annotation with updated no", func() {
-			cm := &corev1.ConfigMap{}
-			err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: AccessConfigMapName}, cm)
-			Expect(err).Should(BeNil())
-			Expect(cm.Annotations["updated"]).Should(Equal("no"))
-		})
-	})
-
-	Context("3. with configmap and updated to yes", func() {
-		cm := newConfigMap(AccessConfigMapName)
-		r := createFakeCephClusterReconciler(cm)
-		err := r.updateAccessConfigMapAnnotation(true)
-
-		It("Should not return error", func() {
-			Expect(err).Should(BeNil())
-		})
-		It("Should configmap has annotation with updated yes", func() {
-			cm := &corev1.ConfigMap{}
-			err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: AccessConfigMapName}, cm)
-			Expect(err).Should(BeNil())
-			Expect(cm.Annotations["updated"]).Should(Equal("yes"))
+			Expect(updated).Should(BeTrue())
 		})
 	})
 })

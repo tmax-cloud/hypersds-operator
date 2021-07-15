@@ -46,7 +46,11 @@ func bootstrapCephadm(targetNode *node.Node, pathConfFromCr string) error {
 	fmt.Println("\n----------------Start to bootstrap ceph---------------")
 
 	fmt.Println("[bootstrapCephadm] copying conf file")
-	err := copyFile(targetNode, node.DESTINATION, pathConfFromCr, pathConfFromCr)
+	err := createDstDir(targetNode, pathConfFromCr)
+	if err != nil {
+		return err
+	}
+	err = copyFile(targetNode, node.DESTINATION, pathConfFromCr, pathConfFromCr)
 	if err != nil {
 		return err
 	}
@@ -295,6 +299,20 @@ func (p *Provisioner) applyOsd(cephConf, cephKeyring []byte) error {
 func processCmdOnNode(targetNode *node.Node, command string) error {
 	output, err := targetNode.RunSSHCmd(wrapper.SSHWrapper, command)
 	return processExecError(err, output)
+}
+
+func createDstDir(targetNode *node.Node, wholePath string) error {
+	paths := strings.Split(wholePath, "/")
+	paths = paths[:len(paths)-1]
+	dirPath := ""
+
+	for _, path := range paths {
+		dirPath += path + "/"
+	}
+	dirPath = strings.TrimSuffix(dirPath, "/")
+	cmd := "mkdir -p " + dirPath
+
+	return processCmdOnNode(targetNode, cmd)
 }
 
 func copyFile(targetNode *node.Node, role node.Role, srcFile, destFile string) error {

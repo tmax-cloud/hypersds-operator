@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	goerrors "errors"
 	"github.com/tmax-cloud/hypersds-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -12,24 +11,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// AccessConfigMapName indicates the name of the configmap that contains ceph cluster access information
-const AccessConfigMapName = "ceph-conf"
+const configMapSuffix = "-conf"
 
-func (r *CephClusterReconciler) syncAccessConfig() error {
-	// NotFound error will occur when the access configmap is not created
-	// No error will occur when the access configmap is already created
-	if _, err := r.getConfigMap(AccessConfigMapName); err == nil {
+func (r *CephClusterReconciler) syncConfigMap() error {
+	// NotFound error will occur when the configmap is not created
+	// No error will occur when the configmap is already created
+	if _, err := r.getConfigMap(); err == nil {
 		return nil
 	} else if !errors.IsNotFound(err) {
 		return err
 	}
 
-	klog.Infof("syncAccessConfig: creating access config map %s", AccessConfigMapName)
+	klog.Infof("syncConfigMap: creating config map %s", r.Cluster.Name)
 	if err := r.updateStateWithReadyToUse(v1alpha1.CephClusterStateCreating, metav1.ConditionFalse, "CephClusterIsCreating", "CephCluster is creating"); err != nil {
 		return err
 	}
 
-	cm, err := r.newAccessConfigMap()
+	cm, err := r.newConfigMap()
 	if err != nil {
 		return err
 	}
@@ -39,20 +37,23 @@ func (r *CephClusterReconciler) syncAccessConfig() error {
 	return nil
 }
 
-func (r *CephClusterReconciler) getConfigMap(name string) (*corev1.ConfigMap, error) {
+func (r *CephClusterReconciler) getConfigMap() (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{}
-	if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: name}, cm); err != nil {
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: r.getConfigMapName()}, cm); err != nil {
 		return nil, err
 	}
 	return cm, nil
 }
 
-func (r *CephClusterReconciler) newAccessConfigMap() (*corev1.ConfigMap, error) {
+func (r *CephClusterReconciler) getConfigMapName() string {
+	return r.Cluster.Name + configMapSuffix
+}
+
+func (r *CephClusterReconciler) newConfigMap() (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        AccessConfigMapName,
-			Namespace:   r.Cluster.Namespace,
-			Annotations: map[string]string{"updated": "no"},
+			Name:      r.getConfigMapName(),
+			Namespace: r.Cluster.Namespace,
 		},
 		Data: map[string]string{},
 	}
@@ -63,34 +64,20 @@ func (r *CephClusterReconciler) newAccessConfigMap() (*corev1.ConfigMap, error) 
 	return cm, nil
 }
 
-func (r *CephClusterReconciler) isAccessConfigMapUpdated() (updated, found bool, err error) {
-	cm, err := r.getConfigMap(AccessConfigMapName)
+func (r *CephClusterReconciler) isConfigMapUpdated() (updated bool, err error) {
+	cm, err := r.getConfigMap()
 	if err != nil {
-		if errors.IsNotFound(err) {
-			return false, false, nil
-		}
-		return false, false, err
+		return false, err
 	}
 
-	u, found := cm.Annotations["updated"]
+	if cm.Data == nil {
+		return false, nil
+	}
+
+	_, found := cm.Data["conf"]
 	if !found {
-		return false, true, goerrors.New("invalid configmap annotation: Must need 'updated'")
+		return false, nil
 	}
-	return u == "yes", true, nil
-}
 
-func (r *CephClusterReconciler) updateAccessConfigMapAnnotation(updated bool) error {
-	cm, err := r.getConfigMap(AccessConfigMapName)
-	if err != nil {
-		return err
-	}
-	if cm.Annotations == nil {
-		cm.Annotations = map[string]string{}
-	}
-	if updated {
-		cm.Annotations["updated"] = "yes"
-	} else {
-		cm.Annotations["updated"] = "no"
-	}
-	return r.Client.Update(context.TODO(), cm)
+	return true, nil
 }

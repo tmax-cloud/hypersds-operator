@@ -139,6 +139,9 @@ kubebuilder-download:
 
 e2e-deploy: registry docker-build docker-push deploy
 	hack/e2e.sh bootstrap
+	hack/e2e.sh update_cm_after_delete
+	hack/e2e.sh update_secret_after_delete
+	hack/e2e.sh delete_cluster
 
 e2e: e2e-deploy clean
 	@echo "e2e completed"
