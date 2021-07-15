@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"github.com/tmax-cloud/hypersds-operator/api/v1alpha1"
+	"github.com/tmax-cloud/hypersds-operator/pkg/provisioner/provisioner"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,12 +46,14 @@ func (r *CephClusterReconciler) syncProvisioner() error {
 	}
 
 	// TODO: SHOULD CHANGE THE LOGIC TO NOT USE PROVISIONER POD
-	pod := &corev1.Pod{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: getProvisionPodName(r.Cluster.Name)}, pod)
-	if err != nil && !errors.IsNotFound(err) {
+	provisionorInstance, err := provisioner.NewProvisioner(r.Cluster.Spec, r.Client, r.Cluster.Namespace, r.Cluster.Name)
+	if err != nil {
 		return err
 	}
-	foundPod := err == nil
+	err = provisionorInstance.Run()
+	if err != nil {
+		return err
+	}
 
 	if !foundPod && !updated {
 		klog.Infof("syncProvisioner: creating new pod for ceph cluster %s", r.Cluster.Name)
@@ -74,57 +77,4 @@ func (r *CephClusterReconciler) syncProvisioner() error {
 		}
 	}
 	return nil
-}
-
-func getProvisionPodName(cephClusterName string) string {
-	return cephClusterName + "-provision-pod"
-}
-
-func isPodCompleted(pod *corev1.Pod) bool {
-	return len(pod.Status.ContainerStatuses) != 0 &&
-		pod.Status.ContainerStatuses[0].State.Terminated != nil &&
-		pod.Status.ContainerStatuses[0].State.Terminated.Reason == "Completed"
-}
-
-func (r *CephClusterReconciler) newPod() (*corev1.Pod, error) {
-	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      getProvisionPodName(r.Cluster.Name),
-			Namespace: r.Cluster.Namespace,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:  ProvisionContainerName,
-					Image: ProvisionContainerImage,
-					Env: []corev1.EnvVar{
-						{Name: "NAMESPACE", Value: r.Cluster.Namespace},
-					},
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      ConfigMapVolumeName,
-							MountPath: ConfigMapVolumePath,
-						},
-					},
-				},
-			},
-			Volumes: []corev1.Volume{
-				{
-					Name: ConfigMapVolumeName,
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: getConfigMapName(r.Cluster.Name),
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	if err := controllerutil.SetControllerReference(r.Cluster, pod, r.Scheme); err != nil {
-		return nil, err
-	}
-	return pod, nil
 }

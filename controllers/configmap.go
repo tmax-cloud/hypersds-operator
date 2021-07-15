@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -36,6 +37,14 @@ func (r *CephClusterReconciler) syncAccessConfig() error {
 		return err
 	}
 	return nil
+}
+
+func (r *CephClusterReconciler) getConfigMap(name string) (*corev1.ConfigMap, error) {
+	cm := &corev1.ConfigMap{}
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: name}, cm); err != nil {
+		return nil, err
+	}
+	return cm, nil
 }
 
 func (r *CephClusterReconciler) newAccessConfigMap() (*corev1.ConfigMap, error) {
