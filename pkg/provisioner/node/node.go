@@ -1,9 +1,8 @@
 package node
 
 import (
-	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
-
 	hypersdsv1alpha1 "github.com/tmax-cloud/hypersds-operator/api/v1alpha1"
+	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
 	"golang.org/x/crypto/ssh"
 
 	"bytes"
@@ -16,6 +15,14 @@ type Node struct {
 	userID   string
 	userPw   string
 	hostSpec HostSpec
+	os       OS
+}
+
+// OS contains operating system info of each node
+type OS struct {
+	Distro   Distro
+	Packager Packager
+	Version  float64
 }
 
 // SetUserID sets userID to value
@@ -36,6 +43,14 @@ func (n *Node) SetHostSpec(hostSpec *HostSpec) error {
 	return nil
 }
 
+// SetOs sets operating system info to its struct
+func (n *Node) SetOs(name Distro, packager Packager, version float64) error {
+	n.os.Distro = name
+	n.os.Packager = packager
+	n.os.Version = version
+	return nil
+}
+
 // GetUserID gets value of userID
 func (n *Node) GetUserID() string {
 	return n.userID
@@ -49,6 +64,11 @@ func (n *Node) GetUserPw() string {
 // GetHostSpec gets value of hostSpec
 func (n *Node) GetHostSpec() HostSpec {
 	return n.hostSpec
+}
+
+// GetOs retrieves operating system info
+func (n *Node) GetOs() OS {
+	return n.os
 }
 
 // RunSSHCmd executes the command on the node using ssh package

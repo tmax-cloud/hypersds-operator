@@ -110,6 +110,12 @@ func (p *Provisioner) Run() error {
 
 	switch currentState := p.getState(); currentState {
 	case InstallStarted:
+		// Fetch OS information for each nodes
+		err = fetchOSInfo(nodeList)
+		if err != nil {
+			return err
+		}
+
 		// Install base package to all nodes
 		err = installBasePackage(nodeList)
 		if err != nil {
@@ -223,7 +229,7 @@ func (p *Provisioner) identifyProvisionerState() (provisionerState, error) {
 
 	// Check base pkgs are installed
 	// TODO: May contain error if user removed docker but did not purge dpkg
-	const checkDockerWorkingCmd = "dpkg --list | grep docker-ce"
+	const checkDockerWorkingCmd = "docker -v"
 	_, err = deployNode.RunSSHCmd(wrapper.SSHWrapper, checkDockerWorkingCmd)
 	// It considers any error that base pkgs are not installed
 	if err != nil {

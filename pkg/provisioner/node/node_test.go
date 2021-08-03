@@ -6,7 +6,7 @@ import (
 
 	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
 
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	hypersdsv1alpha1 "github.com/tmax-cloud/hypersds-operator/api/v1alpha1"
@@ -50,6 +50,15 @@ var _ = Describe("Node Test", func() {
 
 			changedHostSpec := testingNode.GetHostSpec()
 			Expect(changedHostSpec).To(Equal(hostSpec))
+
+			// os distro getter/setter test
+			err = testingNode.SetOs(Ubuntu, Apt, 20.04)
+			Expect(err).NotTo(HaveOccurred())
+
+			updated := testingNode.GetOs()
+			Expect(updated.Distro).To(Equal(Ubuntu))
+			Expect(updated.Packager).To(Equal(Apt))
+			Expect(updated.Version).To(Equal(20.04))
 		})
 	})
 
