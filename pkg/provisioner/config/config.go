@@ -3,8 +3,8 @@ package config
 import (
 	"context"
 	"fmt"
-
 	hypersdsv1alpha1 "github.com/tmax-cloud/hypersds-operator/api/v1alpha1"
+	"github.com/tmax-cloud/hypersds-operator/pkg/common/util"
 	"github.com/tmax-cloud/hypersds-operator/pkg/common/wrapper"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -107,7 +107,7 @@ func (conf *CephConfig) MakeIniFile(ioUtil wrapper.IoUtilInterface, fileName str
 // UpdateConfToK8s updates ceph config(ceph access info) to k8s configmap
 func (conf *CephConfig) UpdateConfToK8s(clientSet client.Client, cephNamespace, cephName string) error {
 	configMap := &corev1.ConfigMap{}
-	if err := clientSet.Get(context.TODO(), types.NamespacedName{Namespace: cephNamespace, Name: cephName}, configMap); err != nil {
+	if err := clientSet.Get(context.TODO(), types.NamespacedName{Namespace: cephNamespace, Name: cephName + util.K8sConfigMapSuffix}, configMap); err != nil {
 		return err
 	}
 
@@ -120,7 +120,7 @@ func (conf *CephConfig) UpdateConfToK8s(clientSet client.Client, cephNamespace, 
 // UpdateKeyringToK8s updates ceph keyring(ceph access info) to k8s secret
 func (conf *CephConfig) UpdateKeyringToK8s(clientSet client.Client, cephNamespace, cephName string) error {
 	secret := &corev1.Secret{}
-	if err := clientSet.Get(context.TODO(), types.NamespacedName{Namespace: cephNamespace, Name: cephName}, secret); err != nil {
+	if err := clientSet.Get(context.TODO(), types.NamespacedName{Namespace: cephNamespace, Name: cephName + util.K8sSecretSuffix}, secret); err != nil {
 		return err
 	}
 

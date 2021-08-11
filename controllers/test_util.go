@@ -62,10 +62,19 @@ func createFakeClientAndScheme(objects ...runtime.Object) (client.Client, *runti
 	return fake.NewFakeClientWithScheme(s, objs...), s, nil
 }
 
-func newConfigMap(name string) *corev1.ConfigMap {
+func newConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      testCephClusterName + configMapSuffix,
+			Namespace: testCephClusterNs,
+		},
+	}
+}
+
+func newSecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testCephClusterName + secretSuffix,
 			Namespace: testCephClusterNs,
 		},
 	}

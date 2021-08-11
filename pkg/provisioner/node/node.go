@@ -98,7 +98,7 @@ func (n *Node) RunScpCmd(exec wrapper.ExecInterface, srcFile, destFile string, r
 	var scpCmd string
 	// provisioner sends srcFile to this node as destFile
 	if role == DESTINATION {
-		scpCmd = fmt.Sprintf("sshpass -f <(printf '%%s\\n' %[1]s) scp %[2]s %[3]s %[4]s@%[5]s:/%[6]s",
+		scpCmd = fmt.Sprintf("sshpass -f <(printf '%%s\\n' %[1]s) scp %[2]s %[3]s %[4]s@%[5]s:%[6]s",
 			userPw, sshKeyCheckOpt, srcFile, userID, ipAddr, destFile)
 
 		// this node sends srcFile to provisioner as destFile

@@ -20,7 +20,6 @@ import (
 	"context"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,8 +43,7 @@ type CephClusterReconciler struct {
 
 // +kubebuilder:rbac:groups=hypersds.tmax.io,resources=cephclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=hypersds.tmax.io,resources=cephclusters/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources=pods;configmaps;secrets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reads that state of the cluster for a CephCluster object and makes changes based on the state read
 func (r *CephClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -62,19 +60,10 @@ func (r *CephClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	r.Cluster = cachedCluster.DeepCopy()
 
 	syncAll := func() error {
-		if err := r.syncAccessConfig(); err != nil {
-			return err
-		}
-		if err := r.syncInstallConfig(); err != nil {
+		if err := r.syncConfigMap(); err != nil {
 			return err
 		}
 		if err := r.syncSecret(); err != nil {
-			return err
-		}
-		if err := r.syncRole(); err != nil {
-			return err
-		}
-		if err := r.syncRoleBinding(); err != nil {
 			return err
 		}
 		if err := r.syncProvisioner(); err != nil {
@@ -98,13 +87,7 @@ func (r *CephClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&hypersdsv1alpha1.CephCluster{}).
 		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
 			&handler.EnqueueRequestForOwner{IsController: true, OwnerType: &hypersdsv1alpha1.CephCluster{}}).
-		Watches(&source.Kind{Type: &corev1.Pod{}},
-			&handler.EnqueueRequestForOwner{IsController: true, OwnerType: &hypersdsv1alpha1.CephCluster{}}).
 		Watches(&source.Kind{Type: &corev1.Secret{}},
-			&handler.EnqueueRequestForOwner{IsController: true, OwnerType: &hypersdsv1alpha1.CephCluster{}}).
-		Watches(&source.Kind{Type: &v1.Role{}},
-			&handler.EnqueueRequestForOwner{IsController: true, OwnerType: &hypersdsv1alpha1.CephCluster{}}).
-		Watches(&source.Kind{Type: &v1.RoleBinding{}},
 			&handler.EnqueueRequestForOwner{IsController: true, OwnerType: &hypersdsv1alpha1.CephCluster{}}).
 		Complete(r)
 }

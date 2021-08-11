@@ -6,7 +6,7 @@ spec:
   mon:
     count: 1
   osd:
-    - hostName: vagrant
+    - hostName: ubuntu-node1
       devices:
         - /dev/sdb
   nodes:
@@ -14,4 +14,4 @@ spec:
       # userId SHOULD BE ROOT
       userId: root
       password: "ck@3434"
-      hostName: vagrant
+      hostName: ubuntu-node1

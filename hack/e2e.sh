@@ -29,7 +29,20 @@ case "${1:-}" in
   bootstrap)
     echo "deploying ceph cluster cr ..."
     kubectl apply -f config/samples/hypersds_v1alpha1_cephcluster.yaml
-    wait_condition "kubectl get cephclusters.hypersds.tmax.io | grep Completed" 1200 60
+    wait_condition "kubectl get cephclusters.hypersds.tmax.io | grep Completed" 1800 60
+  ;;
+  update_cm_after_delete)
+    echo "deleting configmap ..."
+    kubectl delete cm cephcluster-sample
+    wait_condition "kubectl describe cm cephcluster-sample-conf | grep conf" 300 60
+  ;;
+  update_secret_after_delete)
+    echo "deleting secret ..."
+    kubectl delete secret cephcluster-sample
+    wait_condition "kubectl describe secret cephcluster-sample-keyring | grep keyring" 300 60
+  ;;
+  delete_cluster)
+    echo "deleting ceph cluster cr ..."
     kubectl delete -f config/samples/hypersds_v1alpha1_cephcluster.yaml
   ;;
   *)

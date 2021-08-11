@@ -42,4 +42,28 @@ jobs:
         run: make kubebuilder-download
       - name: build
         run: make docker-build
+  e2e:
+    needs: [image-build]
+    runs-on: self-hosted
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        config:
+        - {k8s: v1.19.8, runtime: crio, network: calico}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.13'
+      - run: |
+          export KUBE_VERSION=${{ matrix.config.k8s }} KUBE_RUNTIME=${{ matrix.config.runtime }} KUBE_NETWORK=${{ matrix.config.network }}
+          ./hack/cluster.sh up
+          docker login -u=tmaxanc+robot -p=${{ secrets.QUAY_PASSWORD }} quay.io
+          make e2e
+  cleanup:
+    needs: [e2e]
+    runs-on: self-hosted
+    steps:
+      - run: ./hack/cluster.sh down
+
 

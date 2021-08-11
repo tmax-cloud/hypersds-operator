@@ -123,6 +123,7 @@ restart_ntp(){
     for ip in "${K8s_VMs[@]}"; do
 		ssh root@"${ip}" 'systemctl restart chronyd' &> /dev/null
 		ssh root@"${ip}" 'timedatectl set-ntp true' &> /dev/null
+		ssh root@"${ip}" 'chronyc -a makestep' &> /dev/null
     done
 }
 
@@ -221,7 +222,7 @@ loading_ceph(){
 }
 
 cephNodeClean(){
-    loading_ceph "initial_state"
+    loading_ceph "18.04"
 }
 
 # Poweroff ceph nodes

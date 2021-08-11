@@ -296,7 +296,7 @@ func (p *Provisioner) identifyProvisionerState() (provisionerState, error) {
 func (p *Provisioner) checkKubeObjectUpdated() (confDataBuf, keyringDataBuf []byte, phase bool, err error) {
 	// Check ceph.conf is updated to ConfigMap
 	configMap := &corev1.ConfigMap{}
-	if err := p.clientSet.Get(context.TODO(), types.NamespacedName{Namespace: p.cephNamespace, Name: p.cephName}, configMap); err != nil {
+	if err := p.clientSet.Get(context.TODO(), types.NamespacedName{Namespace: p.cephNamespace, Name: p.cephName + util.K8sConfigMapSuffix}, configMap); err != nil {
 		// Configmap must exist
 		if kubeerrors.IsNotFound(err) {
 			// TODO: Replace stdout to log out
@@ -319,7 +319,7 @@ func (p *Provisioner) checkKubeObjectUpdated() (confDataBuf, keyringDataBuf []by
 
 	// Check client.admin.keyring is updated to Secret
 	secret := &corev1.Secret{}
-	if err := p.clientSet.Get(context.TODO(), types.NamespacedName{Namespace: p.cephNamespace, Name: p.cephName}, secret); err != nil {
+	if err := p.clientSet.Get(context.TODO(), types.NamespacedName{Namespace: p.cephNamespace, Name: p.cephName + util.K8sSecretSuffix}, secret); err != nil {
 		if kubeerrors.IsNotFound(err) {
 			// TODO: Replace stdout to log out
 			fmt.Println("Secret must exist")
