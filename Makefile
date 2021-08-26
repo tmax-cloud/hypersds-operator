@@ -4,6 +4,8 @@ IMG ?= 192.168.7.16:5000/hypersds-operator:latest
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 # Name prefix to generate the names of all resources. This value must be the same as 'namePrefix' defined in config/default/kustomization.yaml
 NAME_PREFIX ?= hypersds-operator-
+KUBE_VERSION ?= 1.19.8
+KUBEBUILDER_VERSION ?= 2.3.1
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -125,7 +127,7 @@ minikube-download:
 	sudo apt-get install conntrack
 
 minikube-start:
-	CHANGE_MINIKUBE_NONE_USER=true sudo -E minikube start --driver=none --kubernetes-version=v1.19.7
+	CHANGE_MINIKUBE_NONE_USER=true sudo -E minikube start --driver=none --kubernetes-version=v$(KUBE_VERSION)
 	sleep 3
 
 minikube-clean:
@@ -133,8 +135,8 @@ minikube-clean:
 
 # Kubebuilder related command
 kubebuilder-download:
-	curl -L https://go.kubebuilder.io/dl/2.3.1/linux/amd64 | tar -xz -C /tmp/
-	sudo mv /tmp/kubebuilder_2.3.1_linux_amd64 /usr/local/kubebuilder
+	curl -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_linux_amd64.tar.gz | tar -xz -C /tmp/
+	sudo mv /tmp/kubebuilder_$(KUBEBUILDER_VERSION)_linux_amd64 /usr/local/kubebuilder
 	export PATH=$(PATH):/usr/local/kubebuilder/bin
 
 e2e-deploy: registry docker-build docker-push deploy
