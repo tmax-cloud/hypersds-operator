@@ -45,7 +45,7 @@ jobs:
   e2e:
     needs: [image-build]
     runs-on: self-hosted
-    timeout-minutes: 40
+    timeout-minutes: 70
     strategy:
       matrix:
         config:

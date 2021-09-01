@@ -23,7 +23,21 @@ func (r *CephClusterReconciler) syncConfigMap() error {
 	}
 
 	klog.Infof("syncConfigMap: creating config map %s", r.Cluster.Name)
-	if err := r.updateStateWithReadyToUse(v1alpha1.CephClusterStateCreating, metav1.ConditionFalse, "CephClusterIsCreating", "CephCluster is creating"); err != nil {
+	if err := r.updateState(v1alpha1.CephClusterStateCreating); err != nil {
+		return err
+	}
+	if err := r.updateCondition(&metav1.Condition{
+		Type:   string(v1alpha1.ConditionBootstrapped),
+		Status: metav1.ConditionFalse,
+		Reason: "BootstrappingIsNotFinished",
+	}); err != nil {
+		return err
+	}
+	if err := r.updateCondition(&metav1.Condition{
+		Type:   string(v1alpha1.ConditionReadyToUse),
+		Status: metav1.ConditionFalse,
+		Reason: "CephClusterIsCreating",
+	}); err != nil {
 		return err
 	}
 

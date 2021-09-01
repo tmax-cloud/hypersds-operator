@@ -72,10 +72,17 @@ func (r *CephClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return nil
 	}
 	if err := syncAll(); err != nil {
-		if err2 := r.updateStateWithReadyToUse(hypersdsv1alpha1.CephClusterStateError, metav1.ConditionFalse, "SeeMessages", err.Error()); err2 != nil {
+		if err2 := r.updateState(hypersdsv1alpha1.CephClusterStateError); err2 != nil {
 			return ctrl.Result{}, err2
 		}
-		return ctrl.Result{}, err
+		if err2 := r.updateCondition(&metav1.Condition{
+			Type:    string(hypersdsv1alpha1.ConditionReadyToUse),
+			Status:  metav1.ConditionFalse,
+			Reason:  "SeeMessages",
+			Message: err.Error(),
+		}); err2 != nil {
+			return ctrl.Result{}, err2
+		}
 	}
 
 	return ctrl.Result{}, nil
@@ -92,14 +99,12 @@ func (r *CephClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *CephClusterReconciler) updateStateWithReadyToUse(state hypersdsv1alpha1.CephClusterState, readyToUseStatus metav1.ConditionStatus,
-	reason, message string) error {
-	meta.SetStatusCondition(&r.Cluster.Status.Conditions, metav1.Condition{
-		Type:    hypersdsv1alpha1.ConditionReadyToUse,
-		Status:  readyToUseStatus,
-		Reason:  reason,
-		Message: message,
-	})
+func (r *CephClusterReconciler) updateState(state hypersdsv1alpha1.CephClusterState) error {
 	r.Cluster.Status.State = state
+	return r.Client.Status().Update(context.TODO(), r.Cluster)
+}
+
+func (r *CephClusterReconciler) updateCondition(condition *metav1.Condition) error {
+	meta.SetStatusCondition(&r.Cluster.Status.Conditions, *condition)
 	return r.Client.Status().Update(context.TODO(), r.Cluster)
 }

@@ -53,19 +53,30 @@ type CephClusterSpec struct {
 	Config map[string]string    `json:"config,omitempty"`
 }
 
+// CephClusterCondition is the current condition of CephCluster
+type CephClusterCondition string
+
+const (
+	// ConditionReadyToUse indicates CephCluster is ready to use
+	ConditionReadyToUse CephClusterCondition = "ReadyToUse"
+	// ConditionBootstrapped indicates CephCluster is bootstrapped
+	ConditionBootstrapped CephClusterCondition = "Bootstrapped"
+	// ConditionOsdDeployed indicates CephCluster is deployed with osds
+	ConditionOsdDeployed CephClusterCondition = "OsdDeployed"
+)
+
 // CephClusterState is the current state of CephCluster
 type CephClusterState string
 
 const (
-	// ConditionReadyToUse indicates CephCluster is ready to use
-	ConditionReadyToUse = "ReadyToUse"
-)
-
-const (
+	// CephClusterStatePending indicates CephClusterState is creating or updating
+	CephClusterStatePending CephClusterState = "Pending"
 	// CephClusterStateCreating indicates CephClusterState is creating
 	CephClusterStateCreating CephClusterState = "Creating"
-	// CephClusterStateCompleted indicates CephClusterState is completed
-	CephClusterStateCompleted CephClusterState = "Completed"
+	// CephClusterStateUpdating indicates CephClusterState is updating
+	CephClusterStateUpdating CephClusterState = "Updating"
+	// CephClusterStateRunning indicates CephClusterState is available
+	CephClusterStateRunning CephClusterState = "Running"
 	// CephClusterStateError indicates CephClusterState is error
 	CephClusterStateError CephClusterState = "Error"
 )
@@ -74,7 +85,7 @@ const (
 type CephClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
+	DeployNode Node               `json:"deployNode,omitempty"`
 	State      CephClusterState   `json:"state"`
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
