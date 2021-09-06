@@ -9,33 +9,28 @@ import (
 )
 
 func (r *CephClusterReconciler) syncProvisioner() error {
-	cmUpdated, err := r.isConfigMapUpdated()
-	if err != nil {
+	if err := r.getConfigMap(); err != nil {
 		if errors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
 
-	secretUpdated, err := r.isSecretUpdated()
-	if err != nil {
+	if err := r.getSecret(); err != nil {
 		if errors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
 
-	if !cmUpdated || !secretUpdated {
-		klog.Infof("syncProvisioner: bootstrapping ceph cluster %s", r.Cluster.Name)
-		provisionerInstance, err := provisioner.NewProvisioner(r.Cluster.Spec, r.Client, r.Cluster.Namespace, r.Cluster.Name)
-		if err != nil {
-			return err
-		}
-		if err := provisionerInstance.Run(); err != nil {
-			return err
-		}
+	klog.Infof("syncProvisioner: bootstrapping ceph cluster %s", r.Cluster.Name)
+	provisionerInstance, err := provisioner.NewProvisioner(r.Cluster.Spec, r.Client, r.Cluster.Namespace, r.Cluster.Name)
+	if err != nil {
+		return err
 	}
-
+	if err := provisionerInstance.Run(); err != nil {
+		return err
+	}
 	if err := r.updateStateWithReadyToUse(v1alpha1.CephClusterStateCompleted, v1.ConditionTrue, "CephClusterIsReady", "Ceph cluster is ready to use"); err != nil {
 		return err
 	}

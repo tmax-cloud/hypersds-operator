@@ -192,9 +192,16 @@ func (p *Provisioner) Run() error {
 		fallthrough
 
 	case CephBootstrapCommitted:
+		//nolint:govet // err need to be redeclared
 		// Copy conf and keyring from deploy node for ceph-common
-		cephConf, cephKeyring, _, _ := p.checkKubeObjectUpdated()
-		// todo check logic?
+		cephConf, cephKeyring, err := p.checkKubeObjectUpdated()
+		if err != nil {
+			return err
+		}
+		// Can not proceed. Need to reconcile again
+		if cephConf == nil || cephKeyring == nil {
+			return errors.New("k8s ConfigMap and Secret is not updated yet")
+		}
 
 		err = p.applyHost(wrapper.YamlWrapper, wrapper.ExecWrapper, wrapper.IoUtilWrapper, cephConf, cephKeyring)
 		if err != nil {
@@ -281,7 +288,7 @@ func (p *Provisioner) identifyProvisionerState() (provisionerState, error) {
 	}
 
 	// Check Ceph bootstrap is committed
-	_, _, committed, err := p.checkKubeObjectUpdated()
+	conf, keyring, err := p.checkKubeObjectUpdated()
 	if err != nil {
 		// Other error occurred on checkKubeObjectUpdated
 		// TODO: Replace stdout to log out
@@ -289,7 +296,7 @@ func (p *Provisioner) identifyProvisionerState() (provisionerState, error) {
 		return CephBootstrapped, err
 	}
 
-	if !committed {
+	if conf == nil || keyring == nil {
 		// TODO: Replace stdout to log out
 		fmt.Println("[identifyProvisionerState] k8s configmap and secret are not updated")
 		return CephBootstrapped, nil
@@ -299,7 +306,7 @@ func (p *Provisioner) identifyProvisionerState() (provisionerState, error) {
 }
 
 // TODO: Replace config const to inputs (e.g. K8sConfigMap, etc)
-func (p *Provisioner) checkKubeObjectUpdated() (confDataBuf, keyringDataBuf []byte, phase bool, err error) {
+func (p *Provisioner) checkKubeObjectUpdated() (confDataBuf, keyringDataBuf []byte, err error) {
 	// Check ceph.conf is updated to ConfigMap
 	configMap := &corev1.ConfigMap{}
 	if err := p.clientSet.Get(context.TODO(), types.NamespacedName{Namespace: p.cephNamespace, Name: p.cephName + util.K8sConfigMapSuffix}, configMap); err != nil {
@@ -307,19 +314,14 @@ func (p *Provisioner) checkKubeObjectUpdated() (confDataBuf, keyringDataBuf []by
 		if kubeerrors.IsNotFound(err) {
 			// TODO: Replace stdout to log out
 			fmt.Println("ConfigMap must exist")
-			return nil, nil, false, err
+			return nil, nil, err
 		}
-		return nil, nil, false, err
+		return nil, nil, err
 	}
 
-	// Bootstrap commit has not occurred
-	if configMap.Data == nil {
-		return nil, nil, false, nil
-	}
 	confData, ok := configMap.Data["conf"]
 	if !ok {
-		fmt.Println("Ceph Conf Data isn't exist")
-		return nil, nil, false, errors.New("Ceph Conf Data isn't exist")
+		return nil, nil, nil
 	}
 	confDataBuf = []byte(confData)
 
@@ -329,22 +331,17 @@ func (p *Provisioner) checkKubeObjectUpdated() (confDataBuf, keyringDataBuf []by
 		if kubeerrors.IsNotFound(err) {
 			// TODO: Replace stdout to log out
 			fmt.Println("Secret must exist")
-			return nil, nil, false, err
+			return nil, nil, err
 		}
-		return nil, nil, false, err
-	}
-
-	if secret.Data == nil {
-		return nil, nil, false, nil
+		return nil, nil, err
 	}
 
 	keyringDataBuf, ok = secret.Data["keyring"]
 	if !ok {
-		fmt.Println("Ceph Keyring Data isn't exist")
-		return nil, nil, false, errors.New("Ceph keyring Data isn't exist")
+		return nil, nil, nil
 	}
 
-	return confDataBuf, keyringDataBuf, true, nil
+	return confDataBuf, keyringDataBuf, nil
 }
 
 // NewProvisioner creates Provisioner using ceph deployment information and checks the current ceph deployment status in node
