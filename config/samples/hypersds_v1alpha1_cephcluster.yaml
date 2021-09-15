@@ -6,12 +6,12 @@ spec:
   mon:
     count: 1
   osd:
-    - hostName: ubuntu-node1
+    - hostName: centos-node4
       devices:
         - /dev/sdb
   nodes:
-    - ip: 192.168.33.11
+    - ip: 192.168.33.21
       # userId SHOULD BE ROOT
       userId: root
       password: "ck@3434"
-      hostName: ubuntu-node1
+      hostName: centos-node4

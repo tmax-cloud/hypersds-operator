@@ -99,21 +99,23 @@ func installCephadm(targetNode *node.Node) error {
 		return err
 	}
 
-	// does something in command need to be changed, related to cephadm version?
-	fmt.Println("[installCephadm] executing curl cephadm gpg key")
-	addCephadmRepoCmd := "curl https://download.ceph.com/keys/release.asc | " +
-		"gpg --no-default-keyring --keyring /tmp/fix.gpg --import - && " +
-		"gpg --no-default-keyring --keyring /tmp/fix.gpg --export > /etc/apt/trusted.gpg.d/ceph.release.gpg && rm /tmp/fix.gpg"
-	err = processCmdOnNode(targetNode, addCephadmRepoCmd)
-	if err != nil {
-		return err
-	}
+	if targetNode.GetOs().Distro == node.Ubuntu {
+		// need for ubuntu 18.04 & ceph version 15.2.8
+		fmt.Println("[installCephadm] executing curl cephadm gpg key")
+		addCephadmRepoCmd := "curl https://download.ceph.com/keys/release.asc | " +
+			"gpg --no-default-keyring --keyring /tmp/fix.gpg --import - && " +
+			"gpg --no-default-keyring --keyring /tmp/fix.gpg --export > /etc/apt/trusted.gpg.d/ceph.release.gpg && rm /tmp/fix.gpg"
+		err = processCmdOnNode(targetNode, addCephadmRepoCmd)
+		if err != nil {
+			return err
+		}
 
-	fmt.Println("[installCephadm] executing cephadm apt-get update")
-	const aptUpdateCmd = "apt-get update"
-	err = processCmdOnNode(targetNode, aptUpdateCmd)
-	if err != nil {
-		return err
+		fmt.Println("[installCephadm] executing cephadm apt-get update")
+		const aptUpdateCmd = "apt-get update"
+		err = processCmdOnNode(targetNode, aptUpdateCmd)
+		if err != nil {
+			return err
+		}
 	}
 
 	fmt.Println("[installCephadm] executing cephadm install")
@@ -130,60 +132,106 @@ func installCephadm(targetNode *node.Node) error {
 	return err
 }
 
+func fetchOSInfo(targetNodeList []*node.Node) error {
+	for _, n := range targetNodeList {
+		if err := node.GetDistro(n); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func installBasePackage(targetNodeList []*node.Node) error {
 	var err error
 	fmt.Println("\n----------------Start to install base package---------------")
 
-	fmt.Println("[installBasePackage] executing apt-get update")
-	const aptUpdateCmd = "apt-get update"
+	fmt.Println("[installBasePackage] executing packager update")
+	const updateCmd = "update -y"
 	for _, n := range targetNodeList {
-		err = processCmdOnNode(n, aptUpdateCmd)
+		packager := n.GetOs().Packager
+		if packager != node.Apt {
+			continue
+		}
+		fmt.Println(string(packager) + updateCmd)
+		err = processCmdOnNode(n, string(packager)+updateCmd)
 		if err != nil {
 			return err
 		}
 	}
 
-	// use standard version in OS
-	fmt.Println("[installBasePackage] executing apt-get install ...")
-	const installPkgCmd = "apt-get install -y apt-transport-https ca-certificates curl software-properties-common ntpdate chrony"
+	fmt.Println("[installBasePackage] install common packages")
+	const installCmd = "install -y "
+	const ntpPkgs = "chrony python3"
 	for _, n := range targetNodeList {
-		err = processCmdOnNode(n, installPkgCmd)
+		packager := n.GetOs().Packager
+		fmt.Println(string(packager) + installCmd + ntpPkgs)
+		err = processCmdOnNode(n, string(packager)+installCmd+ntpPkgs)
 		if err != nil {
 			return err
 		}
 	}
 
-	fmt.Println("[installBasePackage] executing ntpdate")
-	const setNtpCmd = "ntpdate -u time.google.com"
+	fmt.Println("[installBasePackage] install docker dependencies")
+	const dockerDepAptPkgs = "apt-transport-https ca-certificates curl gnupg lsb-release"
+	const dockerDepYumPkgs = "yum-utils"
 	for _, n := range targetNodeList {
-		err = processCmdOnNode(n, setNtpCmd)
+		pkgs := ""
+		packager := n.GetOs().Packager
+		switch packager {
+		case node.Apt:
+			pkgs += dockerDepAptPkgs
+		case node.Yum:
+			pkgs += dockerDepYumPkgs
+		}
+		fmt.Println(string(packager) + installCmd + pkgs)
+		err = processCmdOnNode(n, string(packager)+installCmd+pkgs)
 		if err != nil {
 			return err
 		}
 	}
 
 	fmt.Println("[installBasePackage] executing curl docker ...")
-	const addDockerGpgKeyCmd = "curl -s https://download.docker.com/linux/ubuntu/gpg | apt-key add - &>/dev/null"
+	const dockerUbuntuGpgKeyCmd = "curl -s https://download.docker.com/linux/ubuntu/gpg | apt-key add - &>/dev/null"
 	for _, n := range targetNodeList {
-		err = processCmdOnNode(n, addDockerGpgKeyCmd)
-		if err != nil {
-			return err
+		osName := n.GetOs().Distro
+		if osName == node.Ubuntu {
+			err = processCmdOnNode(n, dockerUbuntuGpgKeyCmd)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	fmt.Println("[installBasePackage] executing add-apt-repo docker ...")
-	const addDockerRepoCmd = `add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"`
+	const dockerAptRepoCmd = `add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"`
+	const dockerYumRepoCmd = "yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo"
 	for _, n := range targetNodeList {
+		addDockerRepoCmd := ""
+		packager := n.GetOs().Packager
+		switch packager {
+		case node.Apt:
+			addDockerRepoCmd += dockerAptRepoCmd
+		case node.Yum:
+			addDockerRepoCmd += dockerYumRepoCmd
+		}
 		err = processCmdOnNode(n, addDockerRepoCmd)
 		if err != nil {
 			return err
 		}
 	}
 
-	fmt.Println("[installBasePackage] executing apt-get install docker-ce")
-	const installDockerCmd = "apt-get update && apt-get -y install docker-ce"
+	fmt.Println("[installBasePackage] executing install docker-ce")
+	const dockerPkgs = "docker-ce"
 	for _, n := range targetNodeList {
-		err = processCmdOnNode(n, installDockerCmd)
+		packager := n.GetOs().Packager
+		if packager == node.Apt {
+			err = processCmdOnNode(n, string(packager)+updateCmd)
+			if err != nil {
+				return err
+			}
+		}
+		err = processCmdOnNode(n, string(packager)+installCmd+dockerPkgs)
 		if err != nil {
 			return err
 		}

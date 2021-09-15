@@ -16,7 +16,7 @@ const configMapSuffix = "-conf"
 func (r *CephClusterReconciler) syncConfigMap() error {
 	// NotFound error will occur when the configmap is not created
 	// No error will occur when the configmap is already created
-	if _, err := r.getConfigMap(); err == nil {
+	if err := r.getConfigMap(); err == nil {
 		return nil
 	} else if !errors.IsNotFound(err) {
 		return err
@@ -37,12 +37,12 @@ func (r *CephClusterReconciler) syncConfigMap() error {
 	return nil
 }
 
-func (r *CephClusterReconciler) getConfigMap() (*corev1.ConfigMap, error) {
+func (r *CephClusterReconciler) getConfigMap() error {
 	cm := &corev1.ConfigMap{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: r.getConfigMapName()}, cm); err != nil {
-		return nil, err
+		return err
 	}
-	return cm, nil
+	return nil
 }
 
 func (r *CephClusterReconciler) getConfigMapName() string {
@@ -62,22 +62,4 @@ func (r *CephClusterReconciler) newConfigMap() (*corev1.ConfigMap, error) {
 		return nil, err
 	}
 	return cm, nil
-}
-
-func (r *CephClusterReconciler) isConfigMapUpdated() (updated bool, err error) {
-	cm, err := r.getConfigMap()
-	if err != nil {
-		return false, err
-	}
-
-	if cm.Data == nil {
-		return false, nil
-	}
-
-	_, found := cm.Data["conf"]
-	if !found {
-		return false, nil
-	}
-
-	return true, nil
 }

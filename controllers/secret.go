@@ -13,7 +13,7 @@ import (
 const secretSuffix = "-keyring"
 
 func (r *CephClusterReconciler) syncSecret() error {
-	if _, err := r.getSecret(); err == nil {
+	if err := r.getSecret(); err == nil {
 		return nil
 	} else if !errors.IsNotFound(err) {
 		return err
@@ -30,12 +30,12 @@ func (r *CephClusterReconciler) syncSecret() error {
 	return nil
 }
 
-func (r *CephClusterReconciler) getSecret() (*corev1.Secret, error) {
+func (r *CephClusterReconciler) getSecret() error {
 	secret := &corev1.Secret{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: r.getSecretName()}, secret); err != nil {
-		return nil, err
+		return err
 	}
-	return secret, nil
+	return nil
 }
 
 func (r *CephClusterReconciler) getSecretName() string {
@@ -55,22 +55,4 @@ func (r *CephClusterReconciler) newSecret() (*corev1.Secret, error) {
 		return nil, err
 	}
 	return secret, nil
-}
-
-func (r *CephClusterReconciler) isSecretUpdated() (updated bool, err error) {
-	secret, err := r.getSecret()
-	if err != nil {
-		return false, err
-	}
-
-	if secret.Data == nil {
-		return false, nil
-	}
-
-	_, found := secret.Data["keyring"]
-	if !found {
-		return false, nil
-	}
-
-	return true, nil
 }

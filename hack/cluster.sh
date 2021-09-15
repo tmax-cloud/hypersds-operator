@@ -5,7 +5,11 @@ K8s_VMs=( ["pl-node1"]="192.168.56.31" \
          ["pl-node2"]="192.168.56.32" \
          ["pl-node3"]="192.168.56.33" )
 declare -A CEPH_VMs
-CEPH_VMs=( ["ubuntu-node1"]="192.168.33.11" \
+CEPH_VMs=( ["centos-node4"]="192.168.33.21" \
+             ["centos-node5"]="192.168.33.22" \
+             ["centos-node6"]="192.168.33.23" )
+declare -A Ubuntu_VMs
+Ubuntu_VMs=( ["ubuntu-node1"]="192.168.33.11" \
              ["ubuntu-node2"]="192.168.33.12" \
              ["ubuntu-node3"]="192.168.33.13" )
 VM="VirtualBox"
@@ -222,7 +226,7 @@ loading_ceph(){
 }
 
 cephNodeClean(){
-    loading_ceph "18.04"
+    loading_ceph "8.2"
 }
 
 # Poweroff ceph nodes
@@ -260,4 +264,3 @@ case "$1" in
         echo
         ;;
 esac
-

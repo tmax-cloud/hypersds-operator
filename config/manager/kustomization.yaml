@@ -1,2 +1,7 @@
 resources:
 - manager.yaml
+patches:
+- target:
+    kind: Deployment
+    name: controller-manager
+  path: manager_resource_patch.yaml
