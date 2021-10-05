@@ -1,0 +1,11 @@
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: csi-cephfs-snapclass
+driver: cephfs.csi.ceph.com
+parameters:
+  # REPLACE THIS VALUE
+  clusterID: 2052b35e-2595-11ec-a43d-0894ef3d365e
+  csi.storage.k8s.io/snapshotter-secret-name: csi-cephfs-secret
+  csi.storage.k8s.io/snapshotter-secret-namespace: ceph-csi
+deletionPolicy: Delete
