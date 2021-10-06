@@ -22,6 +22,26 @@ rules:
 - apiGroups:
   - hypersds.tmax.io
   resources:
+  - cephblockpools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hypersds.tmax.io
+  resources:
+  - cephblockpools/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - hypersds.tmax.io
+  resources:
   - cephclusters
   verbs:
   - create
