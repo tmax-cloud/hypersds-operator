@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rbd-restore
+spec:
+  volumeMode: Block
+  storageClassName: csi-rbd-sc
+  dataSource:
+    name: new-snapshot-rbd
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
