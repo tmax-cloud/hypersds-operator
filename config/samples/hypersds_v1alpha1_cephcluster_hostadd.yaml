@@ -1,0 +1,23 @@
+apiVersion: hypersds.tmax.io/v1alpha1
+kind: CephCluster
+metadata:
+  name: cephcluster-sample
+spec:
+  mon:
+    count: 1
+  osd:
+    - hostName: centos-node4
+      devices:
+        - /dev/sdb
+    - hostName: centos-node5
+      devices:
+        - /dev/sdb
+  nodes:
+    - ip: 192.168.33.21
+      userId: root
+      password: "ck@3434"
+      hostName: centos-node4
+    - ip: 192.168.33.22
+      userId: root
+      password: "ck@3434"
+      hostName: centos-node5

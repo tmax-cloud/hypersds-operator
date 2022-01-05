@@ -39,7 +39,7 @@ var _ = Describe("syncConfigMap", func() {
 			cc := &hypersdsv1alpha1.CephCluster{}
 			err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: r.Cluster.Namespace, Name: r.Cluster.Name}, cc)
 			Expect(err).Should(BeNil())
-			cond := meta.FindStatusCondition(cc.Status.Conditions, hypersdsv1alpha1.ConditionReadyToUse)
+			cond := meta.FindStatusCondition(cc.Status.Conditions, string(hypersdsv1alpha1.ConditionReadyToUse))
 			Expect(cond).ShouldNot(BeNil())
 			Expect(cond.Status).Should(Equal(metav1.ConditionFalse))
 		})

@@ -165,6 +165,25 @@ spec:
                 - type
                 type: object
               type: array
+            deployNode:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
+              properties:
+                hostName:
+                  type: string
+                ip:
+                  type: string
+                password:
+                  type: string
+                userId:
+                  type: string
+              required:
+              - hostName
+              - ip
+              - password
+              - userId
+              type: object
             state:
               description: CephClusterState is the current state of CephCluster
               type: string

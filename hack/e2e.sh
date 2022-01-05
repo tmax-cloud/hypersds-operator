@@ -29,7 +29,7 @@ case "${1:-}" in
   bootstrap)
     echo "deploying ceph cluster cr ..."
     kubectl apply -f config/samples/hypersds_v1alpha1_cephcluster.yaml
-    wait_condition "kubectl get cephclusters.hypersds.tmax.io | grep Completed" 2400 60
+    wait_condition "kubectl get cephclusters.hypersds.tmax.io | grep Running" 2400 60
   ;;
   update_cm_after_delete)
     echo "deleting configmap ..."
@@ -42,6 +42,16 @@ case "${1:-}" in
     kubectl delete secret cephcluster-sample-keyring
     sleep 3
     wait_condition "kubectl describe secret cephcluster-sample-keyring | grep keyring:" 300 60
+  ;;
+  add_host)
+    echo "adding host ..."
+    kubectl apply -f config/samples/hypersds_v1alpha1_cephcluster_hostadd.yaml
+    sleep 600
+  ;;
+  add_disk)
+    echo "adding disk ..."
+    kubectl apply -f config/samples/hypersds_v1alpha1_cephcluster_diskadd_unordered.yaml
+    sleep 600
   ;;
   delete_cluster)
     echo "deleting ceph cluster cr ..."

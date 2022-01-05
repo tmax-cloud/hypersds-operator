@@ -1,7 +1,13 @@
 resources:
 - manager.yaml
 patches:
-- target:
+- path: manager_resource_patch.yaml
+  target:
     kind: Deployment
     name: controller-manager
-  path: manager_resource_patch.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: controller
+  newName: 192.168.9.21:5000/hypersds-operator
+  newTag: latest

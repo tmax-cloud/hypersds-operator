@@ -116,7 +116,7 @@ func (p *Provisioner) applyHost(yamlWrapper wrapper.YamlInterface, execWrapper w
 			nodeIP := hostToApply.GetAddr()
 			nodePw := cephHostNodesToApply[hostNameToApply].GetUserPw()
 
-			const sshKeyCheckOpt = "-oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null"
+			const sshKeyCheckOpt = "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 			sshPassCmd := fmt.Sprintf("sshpass -f <(printf '%%s\\n' %s)", nodePw)
 			hostAuthApplyCmd := fmt.Sprintf("%s ssh-copy-id %s -f -i %s %s@%s", sshPassCmd, sshKeyCheckOpt, pathHostPub, nodeID, nodeIP)
 
@@ -131,7 +131,7 @@ func (p *Provisioner) applyHost(yamlWrapper wrapper.YamlInterface, execWrapper w
 			hostApplyCmd := []string{"orch", "apply", "-i", hostFileName}
 
 			fmt.Println("Executing: " + strings.Join(hostApplyCmd, ","))
-			hostApplyBuf, err = util.RunCephCmd(wrapper.OsWrapper, execWrapper, ioUtilWrapper, cephConf, cephKeyring, cephName, hostAuthGetCmd...)
+			hostApplyBuf, err = util.RunCephCmd(wrapper.OsWrapper, execWrapper, ioUtilWrapper, cephConf, cephKeyring, cephName, hostApplyCmd...)
 
 			if err != nil {
 				fmt.Println("Error: " + hostApplyBuf.String())
